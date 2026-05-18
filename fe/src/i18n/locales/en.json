@@ -1,0 +1,226 @@
+{
+  "navbar": {
+    "home": "Home",
+    "categories": "Categories",
+    "events": "Events",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Register",
+    "profile": "Profile",
+    "myTickets": "My Tickets",
+    "logout": "Logout",
+    "logoutSuccess": "Logged out successfully!",
+    "logoutError": "Logout failed. Please try again.",
+    "loggingOut": "Logging out..."
+  },
+  "user": {
+    "admin": "Admin"
+  },
+  "hero": {
+    "slogan": "Discover Japan's Most Exclusive Events",
+    "subtitle": "Experience authentic Japanese festivals and cultural events",
+    "cta": "Explore Events",
+    "cta2": "Learn More",
+    "attendees": "Attendees",
+    "events": "Events",
+    "cities": "Cities",
+    "uptime": "Uptime",
+    "scrollDown": "Scroll down"
+  },
+  "search": {
+    "title": "Find Your Event",
+    "placeholder": "Search events...",
+    "eventName": "Event Name",
+    "eventNamePlaceholder": "Anime Festival, J-Pop Concert...",
+    "date": "Date",
+    "location": "Location",
+    "search": "Search",
+    "popular": "Popular Searches",
+    "allLocations": "All locations",
+    "locationHanoi": "Hanoi",
+    "locationSaigon": "Ho Chi Minh City",
+    "locationDanang": "Da Nang",
+    "locationJapan": "Japan",
+    "popular1": "Anime Festival",
+    "popular2": "Cherry Blossom",
+    "popular3": "J-Pop Concert",
+    "popular4": "Cosplay Event",
+    "anime": "Anime Festival",
+    "traditional": "Traditional Ceremony",
+    "food": "Food Festival",
+    "music": "Music Event",
+    "travel": "Travel Package",
+    "seasonal": "Seasonal Festival"
+  },
+  "categories": {
+    "title": "Event Categories",
+    "subtitle": "Explore your favorite Japanese event genres",
+    "viewAll": "View All Categories",
+    "anime": "Anime & Pop Culture",
+    "traditional": "Traditional Culture",
+    "food": "Food & Drink Festival",
+    "music": "Music & Concert",
+    "travel": "Travel & Tour",
+    "seasonal": "Seasonal Festivals",
+    "events": "events"
+  },
+  "events": {
+    "title": "Upcoming Events",
+    "subtitle": "Exciting Japanese events waiting for you",
+    "viewAll": "View All Events",
+    "attendees": "Attendees",
+    "rating": "Rating"
+  },
+  "upcoming": {
+    "items": {
+      "1": {
+        "title": "Japan Anime Festival 2024",
+        "date": "15/06/2024 - 17/06/2024",
+        "location": "Hanoi",
+        "category": "Anime & Pop"
+      },
+      "2": {
+        "title": "Cherry Blossom Festival",
+        "date": "20/04/2024 - 30/04/2024",
+        "location": "Japan",
+        "category": "Seasonal"
+      },
+      "3": {
+        "title": "J-Pop Concert Night",
+        "date": "25/05/2024",
+        "location": "Ho Chi Minh City",
+        "category": "Music"
+      },
+      "4": {
+        "title": "Japanese Food Festival",
+        "date": "10/06/2024 - 12/06/2024",
+        "location": "Da Nang",
+        "category": "Food"
+      },
+      "5": {
+        "title": "Cosplay Event Hanoi",
+        "date": "28/05/2024",
+        "location": "Hanoi",
+        "category": "Pop Culture"
+      },
+      "6": {
+        "title": "Traditional Matsuri Tour",
+        "date": "10/08/2024 - 15/08/2024",
+        "location": "Japan",
+        "category": "Culture"
+      }
+    }
+  },
+  "eventCard": {
+    "joined": "joined",
+    "from": "From",
+    "buyTicket": "Buy Ticket"
+  },
+  "festivals": {
+    "title": "Featured Festivals",
+    "subtitle": "Curated premium Japanese cultural experiences",
+    "viewDetails": "View Details",
+    "mountFuji": "Mount Fuji Festival",
+    "tokyoGaming": "Tokyo Gaming Expo",
+    "kyotoMatsuri": "Kyoto Summer Matsuri",
+    "highlight": "Don't Miss This",
+    "items": {
+      "1": {
+        "name": "Mount Fuji Cherry Blossom Viewing",
+        "description": "Experience the traditional cherry blossom festival at the foot of Mount Fuji",
+        "date": "April 1-30, 2024",
+        "highlight": "Top Japan Travel Pick"
+      },
+      "2": {
+        "name": "Tokyo Gaming & Anime Expo",
+        "description": "The biggest gaming and anime festival in Tokyo with over 500 booths",
+        "date": "August 15-17, 2024",
+        "highlight": "Pop Culture Spotlight"
+      },
+      "3": {
+        "name": "Kyoto Traditional Matsuri",
+        "description": "A unique traditional Kyoto festival featuring classic samurai costumes",
+        "date": "July 1-31, 2024",
+        "highlight": "Classic Japanese Beauty"
+      }
+    }
+  },
+  "whyUs": {
+    "title": "Why Choose JC-Ticket",
+    "subtitle": "Reasons thousands of users trust our platform",
+    "safety": "Absolute Security",
+    "safetyDesc": "100% secure payment with trusted providers and full customer data encryption.",
+    "speed": "Fast & Convenient",
+    "speedDesc": "Book tickets in 2-3 clicks and receive e-tickets instantly via email or app.",
+    "community": "Vibrant Community",
+    "communityDesc": "Connect with thousands of Japan fans, share moments, and make new friends.",
+    "exclusive": "Exclusive Offers",
+    "exclusiveDesc": "VIP members get up to 30% discounts and early access to limited tickets.",
+    "trustLine": "Over 100,000 customers trust JC-Ticket",
+    "cta": "Start Booking Now"
+  },
+  "testimonials": {
+    "title": "Customer Testimonials",
+    "subtitle": "Stories from Japan culture fans who booked with JC-Ticket",
+    "name1": "Tanaka Yuki",
+    "text1": "Best event booking platform! Seamless experience from start to finish.",
+    "name2": "Suzuki Hana",
+    "text2": "Love the variety of events. Found the perfect festival!",
+    "name3": "Yamamoto Taro",
+    "text3": "Reliable and trustworthy. Highly recommended!",
+    "name4": "Nakamura Sakura",
+    "text4": "Amazing customer service and great event selection.",
+    "items": {
+      "1": {
+        "author": "Nguyen Thao Vy",
+        "role": "Anime Enthusiast",
+        "content": "JC-Ticket helped me buy tickets for Japan Anime Festival effortlessly. Beautiful interface, fast payment, and instant delivery. Highly recommended!"
+      },
+      "2": {
+        "author": "Pham Dang Khoa",
+        "role": "Travel Blogger",
+        "content": "I used JC-Ticket to book a Cherry Blossom tour in Japan. Their customer service was professional and solved every issue quickly."
+      },
+      "3": {
+        "author": "Tran Ha Linh",
+        "role": "J-Pop Fan",
+        "content": "I bought J-Pop concert tickets on JC-Ticket with VIP benefits. Great experience from start to finish. Will continue using it!"
+      },
+      "4": {
+        "author": "Le Minh Huy",
+        "role": "Event Organizer",
+        "content": "As an event organizer, I am very satisfied with JC-Ticket. The ticket management tools are efficient and intuitive."
+      }
+    }
+  },
+  "newsletter": {
+    "title": "Stay Updated",
+    "description": "Subscribe to receive upcoming Japanese events, exclusive offers, and JC-Ticket news.",
+    "placeholder": "Enter your email",
+    "subscribe": "Subscribe",
+    "subscribed": "Subscribed!",
+    "success": "Thanks! Please check your email to confirm.",
+    "error": "Please enter a valid email.",
+    "privacy": "We respect your privacy. Unsubscribe anytime."
+  },
+  "footer": {
+    "company": "About Company",
+    "about": "About Us",
+    "careers": "Careers",
+    "press": "Press",
+    "blog": "Blog",
+    "support": "Support",
+    "help": "Help Center",
+    "contact": "Contact Us",
+    "faq": "FAQ",
+    "legal": "Legal",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "cookies": "Cookie Policy",
+    "rights": "© 2026 JC-Ticket. All rights reserved.",
+    "scrollTop": "Scroll to top",
+    "brandDescription": "A trusted ticketing platform for Japanese events. Connecting you with unforgettable cultural experiences from the Land of the Rising Sun.",
+    "trustedBy": "Trusted by:",
+    "madeWith": "Made with love for anime and Japanese culture enthusiasts worldwide"
+  }
+}

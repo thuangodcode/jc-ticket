@@ -1,0 +1,226 @@
+{
+  "navbar": {
+    "home": "Trang chủ",
+    "categories": "Danh mục",
+    "events": "Sự kiện",
+    "contact": "Liên hệ",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "profile": "Hồ sơ",
+    "myTickets": "Vé của tôi",
+    "logout": "Đăng xuất",
+    "logoutSuccess": "Đã đăng xuất thành công!",
+    "logoutError": "Đăng xuất thất bại. Vui lòng thử lại.",
+    "loggingOut": "Đang đăng xuất..."
+  },
+  "user": {
+    "admin": "Quản trị viên"
+  },
+  "hero": {
+    "slogan": "Khám phá những sự kiện độc quyền nhất Nhật Bản",
+    "subtitle": "Trải nghiệm những lễ hội và sự kiện văn hóa Nhật Bản chính thức",
+    "cta": "Khám phá sự kiện",
+    "cta2": "Tìm hiểu thêm",
+    "attendees": "Khách tham dự",
+    "events": "Sự kiện",
+    "cities": "Thành phố",
+    "uptime": "Đánh giá",
+    "scrollDown": "Cuộn xuống"
+  },
+  "search": {
+    "title": "Tìm sự kiện của bạn",
+    "placeholder": "Tìm kiếm sự kiện...",
+    "eventName": "Tên sự kiện",
+    "eventNamePlaceholder": "Lễ hội Anime, Concert J-Pop...",
+    "date": "Ngày",
+    "location": "Địa điểm",
+    "search": "Tìm kiếm",
+    "popular": "Tìm kiếm phổ biến",
+    "allLocations": "Tất cả địa điểm",
+    "locationHanoi": "Hà Nội",
+    "locationSaigon": "TP. Hồ Chí Minh",
+    "locationDanang": "Đà Nẵng",
+    "locationJapan": "Nhật Bản",
+    "popular1": "Lễ hội Anime",
+    "popular2": "Hoa anh đào",
+    "popular3": "Concert J-Pop",
+    "popular4": "Sự kiện Cosplay",
+    "anime": "Lễ hội Anime",
+    "traditional": "Lễ truyền thống",
+    "food": "Lễ hội ẩm thực",
+    "music": "Sự kiện âm nhạc",
+    "travel": "Gói du lịch",
+    "seasonal": "Lễ hội mùa"
+  },
+  "categories": {
+    "title": "Danh mục sự kiện",
+    "subtitle": "Khám phá các loại sự kiện Nhật Bản bạn yêu thích",
+    "viewAll": "Xem tất cả danh mục",
+    "anime": "Anime & Văn hóa đại chúng",
+    "traditional": "Văn hóa truyền thống",
+    "food": "Lễ hội ẩm thực",
+    "music": "Âm nhạc & Concert",
+    "travel": "Du lịch & Tour",
+    "seasonal": "Lễ hội theo mùa",
+    "events": "sự kiện"
+  },
+  "events": {
+    "title": "Sự kiện sắp diễn ra",
+    "subtitle": "Những sự kiện Nhật Bản hấp dẫn đang chờ bạn",
+    "viewAll": "Xem tất cả sự kiện",
+    "attendees": "Khách tham dự",
+    "rating": "Đánh giá"
+  },
+  "upcoming": {
+    "items": {
+      "1": {
+        "title": "Japan Anime Festival 2024",
+        "date": "15/06/2024 - 17/06/2024",
+        "location": "Hà Nội",
+        "category": "Anime & Pop"
+      },
+      "2": {
+        "title": "Lễ hội hoa anh đào",
+        "date": "20/04/2024 - 30/04/2024",
+        "location": "Nhật Bản",
+        "category": "Theo mùa"
+      },
+      "3": {
+        "title": "Đêm nhạc J-Pop",
+        "date": "25/05/2024",
+        "location": "TP. Hồ Chí Minh",
+        "category": "Âm nhạc"
+      },
+      "4": {
+        "title": "Lễ hội ẩm thực Nhật Bản",
+        "date": "10/06/2024 - 12/06/2024",
+        "location": "Đà Nẵng",
+        "category": "Ẩm thực"
+      },
+      "5": {
+        "title": "Sự kiện Cosplay Hà Nội",
+        "date": "28/05/2024",
+        "location": "Hà Nội",
+        "category": "Văn hóa đại chúng"
+      },
+      "6": {
+        "title": "Tour Matsuri truyền thống",
+        "date": "10/08/2024 - 15/08/2024",
+        "location": "Nhật Bản",
+        "category": "Văn hóa"
+      }
+    }
+  },
+  "eventCard": {
+    "joined": "đã tham gia",
+    "from": "Từ",
+    "buyTicket": "Mua vé"
+  },
+  "festivals": {
+    "title": "Lễ hội nổi bật",
+    "subtitle": "Những trải nghiệm văn hóa Nhật Bản cao cấp được chọn lọc",
+    "viewDetails": "Xem chi tiết",
+    "mountFuji": "Lễ hội Phú Sĩ",
+    "tokyoGaming": "Tokyo Gaming Expo",
+    "kyotoMatsuri": "Lễ hội mùa hè Kyoto",
+    "highlight": "Đừng bỏ lỡ",
+    "items": {
+      "1": {
+        "name": "Ngắm hoa anh đào dưới chân núi Phú Sĩ",
+        "description": "Trải nghiệm lễ hội hoa anh đào truyền thống tại chân núi Phú Sĩ",
+        "date": "01/04 - 30/04/2024",
+        "highlight": "Điểm đến Nhật Bản đỉnh cao"
+      },
+      "2": {
+        "name": "Tokyo Gaming & Anime Expo",
+        "description": "Lễ hội game và anime lớn nhất tại Tokyo với hơn 500 gian hàng",
+        "date": "15/08 - 17/08/2024",
+        "highlight": "Tâm điểm Pop Culture"
+      },
+      "3": {
+        "name": "Matsuri truyền thống Kyoto",
+        "description": "Lễ hội truyền thống độc đáo của Kyoto với trang phục samurai cổ điển",
+        "date": "01/07 - 31/07/2024",
+        "highlight": "Vẻ đẹp cổ điển Nhật Bản"
+      }
+    }
+  },
+  "whyUs": {
+    "title": "Tại sao chọn JC-Ticket",
+    "subtitle": "Những lý do hàng nghìn người dùng tin tưởng nền tảng của chúng tôi",
+    "safety": "An toàn tuyệt đối",
+    "safetyDesc": "Thanh toán bảo mật 100% với đối tác uy tín, dữ liệu khách hàng được mã hóa toàn bộ.",
+    "speed": "Nhanh và tiện lợi",
+    "speedDesc": "Mua vé chỉ trong 2-3 lượt nhấn, nhận vé điện tử ngay qua email hoặc ứng dụng.",
+    "community": "Cộng đồng sôi động",
+    "communityDesc": "Kết nối với hàng nghìn fan Nhật Bản, chia sẻ trải nghiệm và kết bạn cùng sở thích.",
+    "exclusive": "Ưu đãi độc quyền",
+    "exclusiveDesc": "Thành viên VIP nhận ưu đãi đến 30% và quyền truy cập sớm vé giới hạn.",
+    "trustLine": "Hơn 100.000 khách hàng đã tin tưởng JC-Ticket",
+    "cta": "Bắt đầu mua vé ngay"
+  },
+  "testimonials": {
+    "title": "Ý kiến khách hàng",
+    "subtitle": "Câu chuyện từ những fan văn hóa Nhật Bản đã đặt vé qua JC-Ticket",
+    "name1": "Tanaka Yuki",
+    "text1": "Nền tảng đặt vé sự kiện tốt nhất! Trải nghiệm liền mạch từ đầu đến cuối.",
+    "name2": "Suzuki Hana",
+    "text2": "Yêu thích sự đa dạng của sự kiện. Tìm thấy lễ hội hoàn hảo!",
+    "name3": "Yamamoto Taro",
+    "text3": "Đáng tin cậy và chuyên nghiệp. Được khuyến nghị cao!",
+    "name4": "Nakamura Sakura",
+    "text4": "Dịch vụ khách hàng tuyệt vời và lựa chọn sự kiện tuyệt vời.",
+    "items": {
+      "1": {
+        "author": "Nguyễn Thảo Vy",
+        "role": "Fan Anime",
+        "content": "JC-Ticket giúp mình mua vé Japan Anime Festival cực kỳ dễ dàng. Giao diện đẹp, thanh toán nhanh và nhận vé ngay. Rất đáng dùng!"
+      },
+      "2": {
+        "author": "Phạm Đăng Khoa",
+        "role": "Travel Blogger",
+        "content": "Mình dùng JC-Ticket để đặt tour hoa anh đào tại Nhật Bản. Hỗ trợ khách hàng rất chuyên nghiệp và xử lý vấn đề cực nhanh."
+      },
+      "3": {
+        "author": "Trần Hà Linh",
+        "role": "Fan J-Pop",
+        "content": "Mua vé concert J-Pop qua JC-Ticket và nhận ưu đãi VIP. Trải nghiệm tuyệt vời từ đầu đến cuối, chắc chắn sẽ tiếp tục dùng."
+      },
+      "4": {
+        "author": "Lê Minh Huy",
+        "role": "Nhà tổ chức sự kiện",
+        "content": "Với vai trò đơn vị tổ chức, tôi rất hài lòng với JC-Ticket. Công cụ quản lý vé hiệu quả và trực quan."
+      }
+    }
+  },
+  "newsletter": {
+    "title": "Nhận thông tin sự kiện mới",
+    "description": "Đăng ký để nhận sự kiện Nhật Bản sắp tới, ưu đãi độc quyền và tin tức từ JC-Ticket.",
+    "placeholder": "Nhập email của bạn",
+    "subscribe": "Đăng ký",
+    "subscribed": "Đã đăng ký!",
+    "success": "Cảm ơn! Vui lòng kiểm tra email để xác nhận.",
+    "error": "Vui lòng nhập email hợp lệ.",
+    "privacy": "Chúng tôi tôn trọng quyền riêng tư của bạn. Bạn có thể hủy đăng ký bất kỳ lúc nào."
+  },
+  "footer": {
+    "company": "Về công ty",
+    "about": "Về chúng tôi",
+    "careers": "Việc làm",
+    "press": "Báo chí",
+    "blog": "Blog",
+    "support": "Hỗ trợ",
+    "help": "Trung tâm trợ giúp",
+    "contact": "Liên hệ",
+    "faq": "Câu hỏi thường gặp",
+    "legal": "Pháp lý",
+    "privacy": "Chính sách bảo mật",
+    "terms": "Điều khoản dịch vụ",
+    "cookies": "Chính sách cookie",
+    "rights": "© 2026 JC-Ticket. Tất cả quyền được bảo lưu.",
+    "scrollTop": "Cuộn lên trên",
+    "brandDescription": "Nền tảng bán vé uy tín cho các sự kiện Nhật Bản, kết nối bạn với những trải nghiệm văn hóa đặc sắc từ xứ sở mặt trời mọc.",
+    "trustedBy": "Được tin tưởng bởi:",
+    "madeWith": "Được tạo ra cho cộng đồng yêu anime và văn hóa Nhật Bản trên toàn thế giới"
+  }
+}

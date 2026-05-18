@@ -1,0 +1,11 @@
+{
+  "name": "jc-ticket-fullstack",
+  "scripts": {
+    "dev:backend": "cd be && npm run dev",
+    "dev:frontend": "cd fe && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
