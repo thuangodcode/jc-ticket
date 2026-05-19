@@ -46,7 +46,7 @@ export const register = async (req: any, res: Response) => {
       });
     }
 
-    const { name, email, password } = validation.data;
+    const { name, email, password, phone } = validation.data;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -65,6 +65,7 @@ export const register = async (req: any, res: Response) => {
     const newUser = await User.create({
       name,
       email,
+      phone,
       password,
       isVerified: false,
       verificationOTP: otp,
@@ -85,6 +86,7 @@ export const register = async (req: any, res: Response) => {
       message: 'Registration successful. Check your email for verification OTP.',
       data: {
         email: userResponse.email,
+        phone: userResponse.phone,
         requiresVerification: true,
       },
     });
@@ -176,6 +178,7 @@ export const verifyOTP = async (req: any, res: Response) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
     });
@@ -254,6 +257,7 @@ export const login = async (req: any, res: Response) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
     });

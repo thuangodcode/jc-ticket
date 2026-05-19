@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 export interface IUser extends Document {
   name: string;
   email: string;
+  phone?: string;
   password: string;
   avatar?: string;
   role: 'user' | 'admin';
@@ -42,6 +43,10 @@ const userSchema = new Schema<IUser>(
         /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
         'Please provide a valid email address',
       ],
+    },
+    phone: {
+      type: String,
+      trim: true,
     },
     password: {
       type: String,

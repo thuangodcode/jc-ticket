@@ -8,6 +8,7 @@ import { UserAuthContext, type UserAuthContextType } from './useUserAuth';
 export interface User {
   id: string;
   name: string;
+  phone?: string;
   email: string;
   avatar?: string;
   role: 'user' | 'admin';
@@ -46,6 +47,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       const userData: User = {
         id: response.data.id || '',
         name: response.data.name || '',
+        phone: response.data.phone,
         email: response.data.email || '',
         avatar: response.data.avatar,
         role: response.data.role || 'user',
@@ -129,13 +131,13 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
   /**
    * Register handler
    */
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, phone: string, email: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
       // Registration sends OTP, doesn't log user in yet
-      await authService.register(name, email, password);
+      await authService.register(name, phone, email, password);
 
       // Don't set user/authenticated yet - user needs to verify OTP first
       // This is handled by the registration flow
@@ -211,6 +213,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
           const userData: User = {
             id: response.data.id || '',
             name: response.data.name || '',
+            phone: response.data.phone,
             email: response.data.email || '',
             avatar: response.data.avatar,
             role: response.data.role || 'user',

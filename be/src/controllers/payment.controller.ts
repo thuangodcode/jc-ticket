@@ -2,11 +2,11 @@ import { Response } from 'express';
 import crypto from 'crypto';
 import axios from 'axios';
 import { AuthRequest } from '../middleware/auth';
-import moment from 'moment';
-import qs from 'qs';
 import mongoose from 'mongoose';
 import { Booking } from '../models/Booking';
-
+import { confirmBookingAndIssueTickets } from '../services/bookingPayment.service';
+import { buildVNPayUrl, getVnpReturnUrl, verifyVnpaySignature } from '../config/vnpay.client';
+import { findBookingByTxnRef } from '../utils/bookingLookup';
 /**
  * Payment Controller - Handles payment processing
  * Supports: ZaloPay Sandbox + fallback methods (wallet, bank_transfer)
@@ -23,7 +23,7 @@ const ZALOPAY_CONFIG = {
   callback_url: process.env.ZALOPAY_CALLBACK_URL || 'http://localhost:5000/api/payment/zalopay/callback',
   redirect_url: process.env.FRONTEND_URL
     ? `${process.env.FRONTEND_URL}/payment/result`
-    : 'http://localhost:5173/payment/result',
+    : 'http://localhost:5174/payment/result',
 };
 
 /**
@@ -32,6 +32,12 @@ const ZALOPAY_CONFIG = {
 const hmacSHA256 = (data: string, key: string): string => {
   return crypto.createHmac('sha256', key).update(data).digest('hex');
 };
+
+const IpnSuccess = { RspCode: '00', Message: 'Confirm Success' };
+const IpnFailChecksum = { RspCode: '97', Message: 'Fail checksum' };
+const IpnOrderNotFound = { RspCode: '01', Message: 'Order not found' };
+const IpnInvalidAmount = { RspCode: '04', Message: 'Invalid amount' };
+const IpnOrderAlreadyConfirmed = { RspCode: '02', Message: 'Order already confirmed' };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/payment/zalopay/create
@@ -123,7 +129,7 @@ export const createZaloPayOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Save app_trans_id to booking for later verification
-    booking.paymentMethod = 'wallet' as any;
+    booking.paymentMethod = 'zalopay' as any;
     booking.paymentId = appTransId;
     await booking.save();
 
@@ -191,17 +197,21 @@ export const zaloPayCallback = async (req: any, res: Response) => {
       return res.json(result);
     }
 
-    if (booking.paymentStatus !== 'successful') {
-      booking.paymentStatus = 'successful';
-      booking.paymentMethod = 'wallet' as any; // ZaloPay treated as wallet
-      booking.paymentId = app_trans_id;
-      booking.status = 'confirmed';
-      booking.confirmedAt = new Date();
-      await booking.save();
+    try {
+      const { alreadyConfirmed } = await confirmBookingAndIssueTickets({
+        bookingId: booking._id.toString(),
+        paymentMethod: 'zalopay',
+        paymentId: app_trans_id,
+        skipIfAlreadySuccessful: true,
+      });
 
-      console.log(
-        `✅ ZaloPay callback: booking ${booking.bookingCode} confirmed. Amount: ${amount}`
-      );
+      if (!alreadyConfirmed) {
+        console.log(
+          `✅ ZaloPay callback: booking ${booking.bookingCode} confirmed. Amount: ${amount}`
+        );
+      }
+    } catch (ticketErr: any) {
+      console.error('Ticket generation error (ZaloPay):', ticketErr.message);
     }
 
     result.return_code = 1;
@@ -298,25 +308,36 @@ export const processPayment = async (req: AuthRequest, res: Response) => {
       .toString(36)
       .substring(2, 9)}`;
 
-    booking.paymentStatus = 'successful';
-    booking.paymentId = transactionId;
-    booking.paymentMethod = paymentMethod;
-    if (paymentMethod !== 'bank_transfer') {
-      booking.status = 'confirmed';
-      booking.confirmedAt = new Date();
+    let savedBooking = booking;
+
+    if (paymentMethod === 'bank_transfer') {
+      savedBooking.paymentMethod = paymentMethod as any;
+      savedBooking.paymentId = transactionId;
+      savedBooking.paymentStatus = 'pending';
+      savedBooking.status = 'pending';
+      await savedBooking.save();
+    } else {
+      const { booking: confirmedBooking } = await confirmBookingAndIssueTickets({
+        bookingId: booking._id.toString(),
+        paymentMethod,
+        paymentId: transactionId,
+        skipIfAlreadySuccessful: true,
+      });
+      savedBooking = confirmedBooking as any;
     }
-    await booking.save();
 
     return res.status(200).json({
       success: true,
-      message: 'Payment processed successfully.',
+      message: paymentMethod === 'bank_transfer'
+        ? 'Đơn hàng đã được ghi nhận. Vui lòng chuyển khoản và chờ admin xác nhận.'
+        : 'Payment processed successfully.',
       data: {
-        bookingId: booking._id,
+        bookingId: savedBooking._id,
         paymentId: transactionId,
         amount,
         paymentMethod,
-        status: booking.status,
-        paymentStatus: booking.paymentStatus,
+        status: savedBooking.status,
+        paymentStatus: savedBooking.paymentStatus,
       },
     });
   } catch (error: any) {
@@ -401,23 +422,6 @@ export const refundPayment = async (req: AuthRequest, res: Response) => {
 // VNPAY INTEGRATION
 // ============================================================================
 
-function sortObject(obj: any) {
-  let sorted: any = {};
-  let keys: string[] = [];
-  
-  for (let key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      keys.push(key);
-    }
-  }
-  keys.sort();
-  
-  for (let key of keys) {
-    sorted[key] = obj[key];
-  }
-  return sorted;
-}
-
 /**
  * POST /api/payment/vnpay/create
  * Creates a VNPay payment URL for a booking
@@ -425,7 +429,7 @@ function sortObject(obj: any) {
 export const createVNPayOrder = async (req: AuthRequest, res: Response) => {
   try {
     const { bookingId } = req.body;
-    
+
     if (!mongoose.Types.ObjectId.isValid(bookingId)) {
       return res.status(400).json({ success: false, message: 'Invalid booking ID' });
     }
@@ -439,80 +443,48 @@ export const createVNPayOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: 'Booking is already paid' });
     }
 
-    // ==================== FIX IP ====================
-    let ipAddr = req.headers['x-forwarded-for'] ||
-                 req.socket.remoteAddress ||
-                 req.connection?.remoteAddress ||
-                 '127.0.0.1';
-
-    if (Array.isArray(ipAddr)) ipAddr = ipAddr[0] || '127.0.0.1';
-    if (ipAddr === '::1' || ipAddr.includes('::ffff:')) {
-      ipAddr = '127.0.0.1';
+    let ipAddr =
+      (Array.isArray(req.headers['x-forwarded-for'])
+        ? req.headers['x-forwarded-for'][0]
+        : req.headers['x-forwarded-for']) ||
+      req.socket.remoteAddress ||
+      '127.0.0.1';
+    if (ipAddr === '::1' || ipAddr.startsWith('::ffff:') || ipAddr === '127.0.0.1') {
+      ipAddr = '113.160.92.202';
     }
 
-    const tmnCode = process.env.VNP_TMNCODE!;
-    const secretKey = process.env.VNP_HASHSECRET!;
-    const vnpUrl = process.env.VNP_URL!;
-    const returnUrl = process.env.VNP_RETURNURL!;
+    const normalizedOrderInfo = `Thanh toan don hang ${booking.bookingCode}`
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    const date = new Date();
-    const createDate = moment(date).format('YYYYMMDDHHmmss');
-    const expireDate = moment(date).add(15, 'minutes').format('YYYYMMDDHHmmss');
-    const orderId = booking._id.toString();
-    const amount = booking.totalPrice;
+    booking.paymentMethod = 'vnpay' as any;
+    booking.paymentStatus = 'pending';
+    await booking.save();
 
-    let vnp_Params: any = {
-      vnp_Version: '2.1.0',
-      vnp_Command: 'pay',
-      vnp_TmnCode: tmnCode,
-      vnp_Locale: 'vn',
-      vnp_CurrCode: 'VND',
-      vnp_TxnRef: orderId,
-      vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
-      vnp_OrderType: 'billpayment',
-      vnp_Amount: Math.round(amount * 100),        // Quan trọng: nhân 100
-      vnp_ReturnUrl: returnUrl,
-      vnp_IpAddr: ipAddr,
-      vnp_CreateDate: createDate,
-      vnp_ExpireDate: expireDate,
-    };
+    // ✅ Dùng buildVNPayUrl tự implement — ký raw string đúng chuẩn VNPAY
+    // Thư viện `vnpay` v2.5.0 ký URLSearchParams.toString() (đã encode)
+    // nhưng VNPAY server verify theo raw string → sai chữ ký
+    const paymentUrl = buildVNPayUrl({
+      amount: Math.round(Number(booking.totalPrice)),
+      txnRef: booking.bookingCode,
+      orderInfo: normalizedOrderInfo,
+      returnUrl: getVnpReturnUrl(),
+      ipAddr,
+    });
 
-    vnp_Params = sortObject(vnp_Params);
-
-    const signData = qs.stringify(vnp_Params, { encode: false });
-    const hmac = crypto.createHmac("sha512", secretKey);
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
-
-    // DEBUG: alternate signing method (encode values then replace %20 -> +)
-    const altPairs: string[] = [];
-    for (const k of Object.keys(vnp_Params)) {
-      const v = vnp_Params[k];
-      const keyEnc = encodeURIComponent(k);
-      const valEnc = encodeURIComponent(String(v)).replace(/%20/g, '+');
-      altPairs.push(`${keyEnc}=${valEnc}`);
-    }
-    const altSignData = altPairs.join('&');
-    const altHmac = crypto.createHmac('sha512', secretKey);
-    const altSigned = altHmac.update(Buffer.from(altSignData, 'utf-8')).digest('hex');
-
-    vnp_Params['vnp_SecureHashType'] = 'SHA512';
-    // Try sending lowercase hash and unencoded final URL (matches signData)
-    vnp_Params['vnp_SecureHash'] = signed;
-
-    const paymentUrl = vnpUrl + '?' + qs.stringify(vnp_Params, { encode: false });
-
-    console.log('💳 [Payment] Sign Data:', signData);
-    console.log('💳 [Payment] Generated Hash:', signed);
-    console.log('💳 [Payment] Alt Sign Data:', altSignData);
-    console.log('💳 [Payment] Alt Generated Hash:', altSigned);
-    console.log('💳 [Payment] IP Used:', ipAddr);
+    console.log('💳 [VNPay] TxnRef:', booking.bookingCode);
+    console.log('💳 [VNPay] Amount (VND):', booking.totalPrice);
+    console.log('💳 [VNPay] ReturnUrl:', getVnpReturnUrl());
+    console.log('💳 [VNPay] TmnCode:', process.env.VNP_TMNCODE);
+    console.log('💳 [VNPay] Secret loaded:', Boolean(process.env.VNP_HASHSECRET?.trim()));
+    console.log('💳 [VNPay] Payment URL:', paymentUrl);
 
     return res.status(200).json({
       success: true,
       message: 'VNPay URL generated successfully',
-      data: { orderUrl: paymentUrl }
+      data: { orderUrl: paymentUrl },
     });
-
   } catch (error: any) {
     console.error('VNPay Create Error:', error);
     return res.status(500).json({ success: false, message: error.message });
@@ -526,55 +498,20 @@ export const createVNPayOrder = async (req: AuthRequest, res: Response) => {
 export const vnpayReturn = async (req: AuthRequest, res: Response) => {
   try {
     console.log('🔄 VNPay Return - Query Params:', JSON.stringify(req.query, null, 2));
-    
-    let vnp_Params = req.query as any;
 
-    const secureHash = vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
+    const verify = verifyVnpaySignature(req.query as any);
+    console.log('✔️ Return verified:', verify.isVerified, '| success:', verify.isSuccess);
 
-    vnp_Params = sortObject(vnp_Params);
-    const secretKey = process.env.VNP_HASHSECRET!;
-    const signData = qs.stringify(vnp_Params, { encode: false });
-    const hmac = crypto.createHmac("sha512", secretKey);
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+    if (verify.isVerified) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const status = String(verify.vnp_ResponseCode) === '00' ? '1' : '0';
+      const redirectUrl = `${frontendUrl}/payment/result?status=${status}&orderId=${encodeURIComponent(String(verify.vnp_TxnRef))}&source=vnpay`;
 
-    const orderId = vnp_Params['vnp_TxnRef'] as string;
-    const responseCode = vnp_Params['vnp_ResponseCode'];
-
-    console.log('✔️ Return SecureHash (received):', secureHash);
-    console.log('✔️ Return Signed (computed):', signed);
-    console.log('✔️ Signature Match (case-insensitive):', signed.toLowerCase() === String(secureHash).toLowerCase());
-
-    if (signed === secureHash || signed.toLowerCase() === String(secureHash).toLowerCase()) {
-      const booking = await Booking.findById(orderId);
-      if (booking) {
-        if (responseCode === '00' && booking.paymentStatus !== 'successful') {
-          // Success
-          booking.paymentStatus = 'successful';
-          booking.status = 'confirmed';
-          booking.paymentId = vnp_Params['vnp_TransactionNo'] as string;
-          booking.confirmedAt = new Date();
-          await booking.save();
-          console.log(`✅ Return: Booking ${orderId} marked as successful`);
-        } else if (responseCode !== '00' && booking.paymentStatus === 'pending') {
-          booking.paymentStatus = 'failed';
-          await booking.save();
-          console.log(`❌ Return: Booking ${orderId} marked as failed`);
-        }
-      }
-      return res.status(200).json({
-        success: responseCode === '00',
-        message: responseCode === '00' ? 'Payment successful' : 'Payment failed',
-        data: {
-          code: responseCode,
-          orderId
-        }
-      });
-    } else {
-      console.error('❌ Return: Invalid signature');
-      return res.status(200).json({ success: false, message: 'Invalid signature' });
+      return res.redirect(302, redirectUrl);
     }
+
+    console.error('❌ Return: Invalid signature');
+    return res.status(200).json({ success: false, message: 'Invalid signature' });
   } catch (error: any) {
     console.error('🔥 VNPay Return Error:', error);
     return res.status(200).json({ success: false, message: 'Internal server error', error: error.message });
@@ -589,100 +526,77 @@ export const vnpayIPN = async (req: AuthRequest, res: Response) => {
   try {
     console.log('📨 [IPN] Method:', req.method);
     console.log('📨 [IPN] Query:', req.query);
-    console.log('📨 [IPN] Body:', req.body);
-    console.log('📨 [IPN] VNP_HASHSECRET:', process.env.VNP_HASHSECRET);
-    
-    // Accept parameters from query (GET) or body (POST)
-    let vnp_Params = { ...(req.query as any), ...(req.body as any) };
 
-    console.log('📨 [IPN] Merged Params:', vnp_Params);
+    const query = req.query as Record<string, string>;
+    const receivedHash = String(query.vnp_SecureHash ?? '');
+    const orderInfo = String(query.vnp_OrderInfo ?? '');
 
-    const secureHash = vnp_Params['vnp_SecureHash'] as string;
+    // VNPay merchant portal "Test call IPN" sends hash_test (not a real HMAC) — only checks URL reachability.
+    const isSandboxIpnProbe =
+      process.env.NODE_ENV !== 'production' &&
+      receivedHash === 'hash_test' &&
+      orderInfo === 'Test_call_ipn';
 
-    if (!secureHash) {
-      console.error('❌ [IPN] Missing vnp_SecureHash');
-      return res.status(200).json({
-        RspCode: '97',
-        Message: 'Invalid signature',
-      });
+    if (isSandboxIpnProbe) {
+      console.log('📨 [IPN] Sandbox connectivity test OK (hash_test from VNPay portal)');
+      return res.status(200).json(IpnSuccess);
     }
 
-    console.log('📨 [IPN] Received Hash:', secureHash);
+    const verify = verifyVnpaySignature(query as any);
+    console.log('📨 [IPN] verified:', verify.isVerified, '| success:', verify.isSuccess, '| amount (VND):', verify.vnp_Amount);
 
-    // Remove hash fields
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
-
-    // Convert all params to strings (important!)
-    for (let key in vnp_Params) {
-      vnp_Params[key] = String(vnp_Params[key]);
+    if (!verify.isVerified) {
+      console.error('❌ [IPN] Checksum mismatch');
+      return res.status(200).json(IpnFailChecksum);
     }
 
-    console.log('📨 [IPN] Params before sort:', vnp_Params);
+    if (!verify.isSuccess) {
+      return res.status(200).json({ RspCode: '99', Message: 'Payment not successful' });
+    }
 
-    // Sort params
-    vnp_Params = sortObject(vnp_Params);
+    const txnRef = String(verify.vnp_TxnRef);
+    const paidAmountVnd = Math.round(Number(verify.vnp_Amount));
 
-    console.log('📨 [IPN] Params after sort:', vnp_Params);
+    const booking = await findBookingByTxnRef(txnRef);
+    if (!booking) {
+      console.warn(`⚠️ [IPN] Booking ${txnRef} not found`);
+      return res.status(200).json(IpnOrderNotFound);
+    }
 
-    // Create sign data
-    const signData = qs.stringify(vnp_Params, {
-      encode: false,
-    });
+    const expectedAmountVnd = Math.round(booking.totalPrice);
+    if (paidAmountVnd !== expectedAmountVnd) {
+      console.warn(`⚠️ [IPN] Invalid amount. Expected ${expectedAmountVnd} VND, got ${paidAmountVnd} VND`);
+      return res.status(200).json(IpnInvalidAmount);
+    }
 
-    console.log('📨 [IPN] Sign Data String:', signData);
+    if (booking.paymentStatus === 'successful' || booking.status === 'confirmed') {
+      return res.status(200).json(IpnOrderAlreadyConfirmed);
+    }
 
-    // Create HMAC
-    const secretKey = process.env.VNP_HASHSECRET!;
-    const hmac = crypto.createHmac('sha512', secretKey);
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+    const responseCode = String(verify.vnp_ResponseCode);
+    const transactionStatus = verify.vnp_TransactionStatus != null ? String(verify.vnp_TransactionStatus) : '';
 
-    console.log('📨 [IPN] Expected Hash:', signed);
-    console.log('📨 [IPN] Received Hash:', secureHash);
-    console.log('📨 [IPN] Hash Match:', signed === secureHash);
-    console.log('📨 [IPN] Hash Match (lowercase):', signed.toLowerCase() === secureHash.toLowerCase());
-
-    // Verify signature
-    // Accept test calls with dummy hash 'hash_test' from VNPAY admin panel
-    const isTestCall = secureHash === 'hash_test' || vnp_Params['vnp_TxnRef'] === '222222';
-    
-    if (isTestCall || secureHash === signed || secureHash.toLowerCase() === signed.toLowerCase()) {
-      const orderId = vnp_Params['vnp_TxnRef'] as string;
-      const responseCode = vnp_Params['vnp_ResponseCode'];
-
-      console.log(`✅ [IPN] Signature verified! Order: ${orderId}, Code: ${responseCode}, IsTestCall: ${isTestCall}`);
-
-      // For real calls, update booking. For test calls, just return success
-      if (!isTestCall) {
-        const booking = await Booking.findById(orderId);
-
-        if (booking) {
-          if (booking.paymentStatus !== 'successful' && responseCode === '00') {
-            booking.paymentStatus = 'successful';
-            booking.status = 'confirmed';
-            booking.paymentId = vnp_Params['vnp_TransactionNo'] as string;
-            booking.confirmedAt = new Date();
-            await booking.save();
-            console.log(`✅ [IPN] Booking ${orderId} marked as successful`);
-          }
-        } else {
-          console.warn(`⚠️ [IPN] Booking ${orderId} not found`);
-        }
-      } else {
-        console.log(`📝 [IPN] Test call - skipping booking update`);
+    if (responseCode === '00' || transactionStatus === '00') {
+      try {
+        const txnNo = verify.vnp_TransactionNo != null ? String(verify.vnp_TransactionNo) : undefined;
+        await confirmBookingAndIssueTickets({
+          bookingId: booking._id.toString(),
+          paymentMethod: 'vnpay',
+          ...(txnNo ? { paymentId: txnNo } : {}),
+          skipIfAlreadySuccessful: true,
+        });
+        console.log(`✅ [IPN] Booking ${txnRef} confirmed`);
+      } catch (ticketErr: any) {
+        console.error('Ticket generation error (VNPay IPN):', ticketErr.message);
       }
-
-      return res.status(200).json({
-        RspCode: '00',
-        Message: 'success',
-      });
+    } else {
+      booking.paymentStatus = 'failed';
+      booking.paymentMethod = 'vnpay' as any;
+      await booking.save();
+      console.log(`❌ [IPN] Booking ${txnRef} marked as failed`);
     }
 
-    console.error('❌ [IPN] Signature mismatch');
-    return res.status(200).json({
-      RspCode: '97',
-      Message: 'Invalid signature',
-    });
+    return res.status(200).json(IpnSuccess);
   } catch (error: any) {
     console.error('🔥 [IPN] Error:', error.message, error.stack);
     return res.status(200).json({

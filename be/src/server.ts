@@ -1,14 +1,18 @@
+import './config/loadEnv';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import uploadRoutes from './routes/upload';
-import authRoutes from './routes/auth.routes';
-import { globalErrorHandler } from './middleware/auth';
 
-dotenv.config();
+// Routes
+import authRoutes from './routes/auth.routes';
+import eventRoutes from './routes/event.routes';
+import bookingRoutes from './routes/booking.routes';
+import ticketRoutes from './routes/ticket.routes';
+import paymentRoutes from './routes/payment.routes';
+import uploadRoutes from './routes/upload';
+import { globalErrorHandler } from './middleware/auth';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,8 +21,22 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 
 // CORS Middleware - Allow credentials and specific origins
+const allowedOrigins = new Set([
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+]);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5174',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true, // Allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -55,7 +73,7 @@ app.get('/', (_req, res) => {
     message: 'JC-Ticket Backend đang chạy!',
     status: 'success',
     database: 'Connected to MongoDB Atlas',
-    version: '1.0.0'
+    version: '2.0.0'
   });
 });
 
@@ -68,13 +86,15 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Auth Routes
+// API Routes
 app.use('/api/auth', authRoutes);
-
-// Upload routes
+app.use('/api/events', eventRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api', uploadRoutes);
 
-// Error Handling
+// 404 Handler
 app.use((_req, res) => {
   res.status(404).json({ 
     success: false,
@@ -88,4 +108,5 @@ app.use(globalErrorHandler);
 app.listen(PORT, () => {
   console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📡 API Routes: /api/auth, /api/events, /api/bookings, /api/tickets, /api/payment`);
 });

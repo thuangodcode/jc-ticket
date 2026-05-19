@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import type { FC, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useUserAuth } from '../contexts/useUserAuth';
 import { useAuthModal } from '../contexts/AuthModalContext';
@@ -25,7 +25,7 @@ interface ProtectedButtonProps {
   title?: string;
 }
 
-export const ProtectedButton: React.FC<ProtectedButtonProps> = ({
+export const ProtectedButton: FC<ProtectedButtonProps> = ({
   children,
   onClick,
   variant = 'primary',

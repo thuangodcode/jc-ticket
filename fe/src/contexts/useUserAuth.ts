@@ -14,7 +14,7 @@ export interface UserAuthContextType {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   autoLogin: (email: string, password: string) => Promise<void>; // For OTP flow
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, phone: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetError: () => void;
 

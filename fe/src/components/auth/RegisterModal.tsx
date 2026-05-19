@@ -15,6 +15,7 @@ const RegisterModal: React.FC = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    phone: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -51,7 +52,7 @@ const RegisterModal: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.phone || !formData.email || !formData.password || !formData.confirmPassword) {
       setError('Vui lòng điền tất cả các trường');
       return;
     }
@@ -70,6 +71,7 @@ const RegisterModal: React.FC = () => {
     try {
       const response = await registerUser({
         name: formData.name,
+        phone: formData.phone,
         email: formData.email,
         password: formData.password,
       });
@@ -159,8 +161,27 @@ const RegisterModal: React.FC = () => {
         />
       </motion.div>
 
-      {/* Email Input */}
+      {/* Phone Input */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-zinc-300' : 'text-charcoal'}`}>
+          Số điện thoại
+        </label>
+        <input
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          placeholder="0901234567"
+          disabled={isLoading}
+          className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-all ${
+            isDark
+              ? 'border-zinc-700 bg-zinc-800 text-white placeholder-zinc-600 focus:border-akai'
+              : 'border-gray-300 bg-white text-ink placeholder-gray-400 focus:border-akai'
+          }`}
+        />
+      </motion.div>
+
+      {/* Email Input */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
         <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-zinc-300' : 'text-charcoal'}`}>
           Email đăng nhập
         </label>
@@ -179,7 +200,7 @@ const RegisterModal: React.FC = () => {
       </motion.div>
 
       {/* Password Input */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
         <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-zinc-300' : 'text-charcoal'}`}>
           Mật khẩu
         </label>

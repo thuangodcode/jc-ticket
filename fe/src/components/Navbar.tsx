@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Menu, X, ShoppingCart, Moon, Sun, Globe, LogOut, User, Ticket } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Menu, X, ShoppingCart, Moon, Sun, Globe, LogOut, User, Ticket, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -227,30 +228,51 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
                             {/* Menu Items */}
                             <div className="py-1">
                               {/* Profile */}
-                              <motion.button
-                                whileHover={{
-                                  backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                }}
-                                className={`w-full px-4 py-2 text-left flex items-center space-x-2 transition-colors ${
-                                  isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'
-                                }`}
-                              >
-                                <User size={16} />
-                                <span>{t('navbar.profile') || 'Profile'}</span>
-                              </motion.button>
+                              <Link to="/profile">
+                                <motion.div
+                                  whileHover={{
+                                    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+                                  }}
+                                  className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
+                                    isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'
+                                  }`}
+                                >
+                                  <User size={16} />
+                                  <span>{t('navbar.profile') || 'Profile'}</span>
+                                </motion.div>
+                              </Link>
 
                               {/* My Tickets */}
-                              <motion.button
-                                whileHover={{
-                                  backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                }}
-                                className={`w-full px-4 py-2 text-left flex items-center space-x-2 transition-colors ${
-                                  isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'
-                                }`}
-                              >
-                                <Ticket size={16} />
-                                <span>{t('navbar.myTickets') || 'My Tickets'}</span>
-                              </motion.button>
+                              <Link to="/my-tickets">
+                                <motion.div
+                                  whileHover={{
+                                    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+                                  }}
+                                  className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
+                                    isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'
+                                  }`}
+                                >
+                                  <Ticket size={16} />
+                                  <span>{t('navbar.myTickets') || 'My Tickets'}</span>
+                                </motion.div>
+                              </Link>
+
+                              {/* Admin Panel - Only for admin users */}
+                              {user.role === 'admin' && (
+                                <Link to="/admin">
+                                  <motion.div
+                                    whileHover={{
+                                      backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+                                    }}
+                                    className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
+                                      isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
+                                    }`}
+                                  >
+                                    <Shield size={16} />
+                                    <span>Admin Panel</span>
+                                  </motion.div>
+                                </Link>
+                              )}
 
                               {/* Divider */}
                               <div

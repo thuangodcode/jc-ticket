@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import type { FC, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useUserAuth } from '../contexts/useUserAuth';
 import { useAuthModal } from '../contexts/AuthModalContext';
@@ -16,7 +16,7 @@ interface RequireAuthProps {
   showPrompt?: boolean; // Show "Please login" message
 }
 
-export const RequireAuth: React.FC<RequireAuthProps> = ({
+export const RequireAuth: FC<RequireAuthProps> = ({
   children,
   fallback,
   showPrompt = true,
@@ -89,12 +89,10 @@ export const RequireAuth: React.FC<RequireAuthProps> = ({
  */
 interface ProtectedRouteProps {
   children: ReactNode;
-  redirectTo?: string;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  redirectTo = '/',
 }) => {
   const { isAuthenticated, isLoading } = useUserAuth();
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AUTHENTICATION USAGE EXAMPLES
  * 

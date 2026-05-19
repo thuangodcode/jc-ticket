@@ -18,6 +18,7 @@ const authAPI = axios.create({
  */
 export const registerUser = async (data: {
   name: string;
+  phone: string;
   email: string;
   password: string;
 }) => {
@@ -102,8 +103,8 @@ export const getCurrentUserProfile = async () => {
  */
 export const authService = {
   // Registration flow
-  register: async (name: string, email: string, password: string) => {
-    return registerUser({ name, email, password });
+  register: async (name: string, phone: string, email: string, password: string) => {
+    return registerUser({ name, phone, email, password });
   },
 
   verifyOTP: async (email: string, otp: string) => {
