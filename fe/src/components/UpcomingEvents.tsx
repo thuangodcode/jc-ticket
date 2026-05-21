@@ -1,8 +1,10 @@
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { EventCard } from './EventCard';
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
+import { eventService } from '../services/eventService';
 
 interface Event {
   id: string;
@@ -32,8 +34,11 @@ export const UpcomingEvents: React.FC<UpcomingEventsProps> = ({
   const { t } = useTranslation();
   const { isDark } = useTheme();
 
-  // Sample events data
-  const events: Event[] = [
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Sample events data to fallback to if DB is empty/fails
+  const sampleEvents: Event[] = [
     {
       id: '1',
       title: t('upcoming.items.1.title'),
@@ -102,6 +107,47 @@ export const UpcomingEvents: React.FC<UpcomingEventsProps> = ({
     },
   ];
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUpcoming = async () => {
+      try {
+        const res = await eventService.getEvents({ page: 1, limit: 6 });
+        if (isMounted) {
+          if (res && res.data && res.data.length > 0) {
+            const mapped = res.data.map((evt: any) => ({
+              id: evt._id,
+              title: evt.title,
+              image: evt.image,
+              date: new Date(evt.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+              location: evt.location,
+              price: evt.price,
+              attendees: evt.attendees || 0,
+              rating: evt.rating || 4.5,
+              category: evt.category,
+            }));
+            setEvents(mapped);
+          } else {
+            setEvents(sampleEvents);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching upcoming events:', err);
+        if (isMounted) {
+          setEvents(sampleEvents);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUpcoming();
+    return () => {
+      isMounted = false;
+    };
+  }, [t]);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -164,17 +210,23 @@ export const UpcomingEvents: React.FC<UpcomingEventsProps> = ({
           viewport={{ once: true }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {events.map((event) => (
-            <motion.div
-              key={event.id}
-              variants={itemVariants}
-            >
-              <EventCard
-                {...event}
-                onClick={() => onEventClick?.(event)}
-              />
-            </motion.div>
-          ))}
+          {loading ? (
+            [...Array(6)].map((_, i) => (
+              <div key={i} className={`animate-pulse rounded-2xl h-[420px] ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
+            ))
+          ) : (
+            events.map((event) => (
+              <motion.div
+                key={event.id}
+                variants={itemVariants}
+              >
+                <EventCard
+                  {...event}
+                  onClick={() => onEventClick?.(event)}
+                />
+              </motion.div>
+            ))
+          )}
         </motion.div>
       </div>
     </section>
