@@ -1,3 +1,4 @@
+import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import QRCode from 'qrcode';
 import { ITicket } from '../models/Ticket';
@@ -7,44 +8,43 @@ import { IEvent } from '../models/Event';
 /**
  * Ticket Email Utility
  * Gửi email xác nhận vé cho khách hàng sau khi thanh toán thành công
+ * PRIMARY: SendGrid HTTP API | FALLBACK: Nodemailer SMTP
  */
 
 const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
 
-const createTransporter = () => {
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
+const FROM_ADDRESS =
+  process.env.EMAIL_FROM ||
+  `JC-Ticket <${process.env.GMAIL_EMAIL || 'noreply@jcticket.app'}>`;
 
-  if (emailService === 'gmail') {
-    return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      // Port 587 + STARTTLS - works on Render/cloud providers
-      // Port 465 (SSL) is often blocked by cloud hosting firewalls
-      port: 587,
-      secure: false,      // false = STARTTLS (upgrades to TLS after connect)
-      requireTLS: true,
-      auth: {
-        user: normalizeAppPassword(process.env.GMAIL_EMAIL),
-        pass: normalizeAppPassword(process.env.GMAIL_APP_PASSWORD),
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 20000,
-      greetingTimeout: 15000,
-      socketTimeout: 25000,
-    });
+const sendEmailInternal = async (to: string, subject: string, html: string): Promise<void> => {
+  // Primary: SendGrid HTTP API (không bị block trên Render free tier)
+  if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    await sgMail.send({ to, from: FROM_ADDRESS, subject, html });
+    console.log(`✅ [SendGrid] Ticket email sent to ${to}`);
+    return;
   }
 
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
+  // Fallback: Nodemailer SMTP
+  console.warn('⚠️ SENDGRID_API_KEY not set, using Nodemailer SMTP fallback');
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    requireTLS: true,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
+      user: normalizeAppPassword(process.env.GMAIL_EMAIL),
+      pass: normalizeAppPassword(process.env.GMAIL_APP_PASSWORD),
     },
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 20000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000,
   });
+  await transporter.sendMail({ from: FROM_ADDRESS, to, subject, html });
 };
+
 
 /**
  * Generate QR code as base64 data URL
@@ -91,7 +91,6 @@ export const sendTicketEmail = async (
   tickets: ITicket[]
 ): Promise<void> => {
   try {
-    const transporter = createTransporter();
     const event = booking.eventId;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -115,9 +114,6 @@ export const sendTicketEmail = async (
     }
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.GMAIL_EMAIL,
-      to: booking.passengerInfo.email,
-      subject: `🎫 JC-Ticket - Vé của bạn cho "${event.title}" đã sẵn sàng!`,
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f5f5f5; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -206,7 +202,11 @@ export const sendTicketEmail = async (
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendEmailInternal(
+      booking.passengerInfo.email,
+      `🎫 JC-Ticket - Vé của bạn cho "${event.title}" đã sẵn sàng!`,
+      mailOptions.html
+    );
     console.log(`📧 Ticket email sent to ${booking.passengerInfo.email}`);
   } catch (error) {
     console.error('❌ Error sending ticket email:', error);

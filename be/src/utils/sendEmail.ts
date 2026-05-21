@@ -1,80 +1,109 @@
+import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 
 const normalizeEmailAddress = (value?: string) => (value || '').replace(/[<>]/g, '').trim();
 const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
-// Tăng timeout lên 30s - cloud SMTP có latency cao hơn local
+
+// 30s timeout cho SMTP fallback (cloud latency)
 const EMAIL_SEND_TIMEOUT_MS = 30000;
 
 const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${EMAIL_SEND_TIMEOUT_MS}ms`)), EMAIL_SEND_TIMEOUT_MS);
+    timeoutId = setTimeout(
+      () => reject(new Error(`${label} timed out after ${EMAIL_SEND_TIMEOUT_MS}ms`)),
+      EMAIL_SEND_TIMEOUT_MS
+    );
   });
 
   try {
     return await Promise.race([promise, timeoutPromise]);
   } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
+    if (timeoutId) clearTimeout(timeoutId);
   }
 };
 
 /**
- * Email Utility - Handles sending emails using Nodemailer
- * Supports both Gmail SMTP and generic SMTP configuration
+ * === EMAIL PROVIDER STRATEGY ===
+ *
+ * PRIMARY:  SendGrid HTTP API  (SENDGRID_API_KEY set)
+ *           → Works on Render free tier (HTTP, không dùng SMTP port)
+ *           → 100 emails/day free
+ *
+ * FALLBACK: Nodemailer SMTP   (khi không có SENDGRID_API_KEY)
+ *           → Hoạt động local, có thể bị block trên Render free tier
  */
+
+interface MailPayload {
+  to: string;
+  subject: string;
+  html: string;
+}
+
+const FROM_ADDRESS =
+  process.env.EMAIL_FROM ||
+  `JC-Ticket <${process.env.GMAIL_EMAIL || 'noreply@jcticket.app'}>`;
 
 /**
- * Create transporter for sending emails
- * Uses environment variables for configuration
+ * Gửi email qua SendGrid HTTP API
+ * Không dùng SMTP port → luôn hoạt động trên cloud
  */
-const createTransporter = () => {
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
-  
-  if (emailService === 'gmail') {
-    const gmailUser = normalizeEmailAddress(process.env.GMAIL_EMAIL);
-    const gmailPass = normalizeAppPassword(process.env.GMAIL_APP_PASSWORD);
+const sendViaSendGrid = async ({ to, subject, html }: MailPayload): Promise<void> => {
+  const apiKey = process.env.SENDGRID_API_KEY!;
+  sgMail.setApiKey(apiKey);
 
-    if (!gmailUser || !gmailPass) {
-      throw new Error('Missing Gmail SMTP credentials (GMAIL_EMAIL/GMAIL_APP_PASSWORD)');
-    }
+  // SendGrid cần "from" là email đã verify (Single Sender Verification)
+  const from = FROM_ADDRESS;
 
-    return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      // Port 587 + STARTTLS - works on Render/Vercel/most cloud providers
-      // Port 465 (SSL) is often blocked by cloud hosting firewalls
-      port: 587,
-      secure: false,      // false = STARTTLS (upgrades to TLS after connect)
-      requireTLS: true,   // Force TLS upgrade - rejects if server doesn't support
-      auth: {
-        user: gmailUser,
-        pass: gmailPass,  // Google App Password (không phải password thường)
-      },
-      tls: {
-        rejectUnauthorized: false, // Bỏ qua cert errors trong môi trường cloud
-      },
-      connectionTimeout: 20000,  // 20s để kết nối
-      greetingTimeout: 15000,    // 15s chờ SMTP greeting
-      socketTimeout: 25000,      // 25s socket idle timeout
-    });
+  await sgMail.send({ to, from, subject, html });
+  console.log(`✅ [SendGrid] Email sent to ${to}`);
+};
+
+/**
+ * Gửi email qua Nodemailer SMTP (fallback)
+ * Port 587 + STARTTLS - có thể bị block trên Render free tier
+ */
+const sendViaNodemailer = async ({ to, subject, html }: MailPayload): Promise<void> => {
+  const gmailUser = normalizeEmailAddress(process.env.GMAIL_EMAIL);
+  const gmailPass = normalizeAppPassword(process.env.GMAIL_APP_PASSWORD);
+
+  if (!gmailUser || !gmailPass) {
+    throw new Error('Missing email credentials: GMAIL_EMAIL or GMAIL_APP_PASSWORD not set');
   }
 
-  // Generic SMTP configuration
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,      // STARTTLS
+    requireTLS: true,
+    auth: { user: gmailUser, pass: gmailPass },
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 20000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000,
   });
+
+  await withTimeout(
+    transporter.sendMail({ from: FROM_ADDRESS, to, subject, html }),
+    'Nodemailer SMTP email'
+  );
+  console.log(`✅ [Nodemailer] Email sent to ${to}`);
 };
 
 /**
- * Send verification OTP email
+ * Core email sender - auto-selects provider
+ */
+const sendEmail = async (payload: MailPayload): Promise<void> => {
+  if (process.env.SENDGRID_API_KEY) {
+    return sendViaSendGrid(payload);
+  }
+  console.warn('⚠️ SENDGRID_API_KEY not set, falling back to Nodemailer SMTP (may fail on Render)');
+  return sendViaNodemailer(payload);
+};
+
+/**
+ * Send verification OTP email (Registration)
  */
 export const sendVerificationOTP = async (
   email: string,
@@ -82,10 +111,7 @@ export const sendVerificationOTP = async (
   otp: string
 ): Promise<void> => {
   try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: normalizeEmailAddress(process.env.EMAIL_FROM) || normalizeEmailAddress(process.env.GMAIL_EMAIL),
+    await sendEmail({
       to: email,
       subject: 'JC-Ticket - Email Verification OTP',
       html: `
@@ -121,15 +147,12 @@ export const sendVerificationOTP = async (
             <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
 
             <p style="color: #999; font-size: 12px; text-align: center;">
-              © 2024 JC-Ticket. All rights reserved.
+              © ${new Date().getFullYear()} JC-Ticket. All rights reserved.
             </p>
           </div>
         </div>
       `,
-    };
-
-    await withTimeout(transporter.sendMail(mailOptions), 'Verification email sending');
-    console.log(`Verification OTP sent to ${email}`);
+    });
   } catch (error) {
     console.error('Error sending verification OTP:', error);
     throw new Error('Failed to send verification email');
@@ -145,10 +168,7 @@ export const sendPasswordResetOTP = async (
   otp: string
 ): Promise<void> => {
   try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: normalizeEmailAddress(process.env.EMAIL_FROM) || normalizeEmailAddress(process.env.GMAIL_EMAIL),
+    await sendEmail({
       to: email,
       subject: 'JC-Ticket - Password Reset OTP',
       html: `
@@ -180,15 +200,12 @@ export const sendPasswordResetOTP = async (
             <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
 
             <p style="color: #999; font-size: 12px; text-align: center;">
-              © 2024 JC-Ticket. All rights reserved.
+              © ${new Date().getFullYear()} JC-Ticket. All rights reserved.
             </p>
           </div>
         </div>
       `,
-    };
-
-    await withTimeout(transporter.sendMail(mailOptions), 'Password reset email sending');
-    console.log(`Password reset OTP sent to ${email}`);
+    });
   } catch (error) {
     console.error('Error sending password reset OTP:', error);
     throw new Error('Failed to send password reset email');
