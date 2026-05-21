@@ -27,6 +27,13 @@ const generateToken = (userId: string, email: string, role: string): string => {
   );
 };
 
+const getAuthCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+} as const);
+
 /**
  * POST /api/auth/register
  * Register a new user and send verification OTP
@@ -164,12 +171,7 @@ export const verifyOTP = async (req: any, res: Response) => {
     const token = generateToken(user._id.toString(), user.email, user.role);
 
     // Set httpOnly cookie
-    res.cookie('accessToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie('accessToken', token, getAuthCookieOptions());
 
     return res.status(200).json({
       success: true,
@@ -243,12 +245,7 @@ export const login = async (req: any, res: Response) => {
     const token = generateToken(user._id.toString(), user.email, user.role);
 
     // Set httpOnly cookie
-    res.cookie('accessToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie('accessToken', token, getAuthCookieOptions());
 
     return res.status(200).json({
       success: true,
@@ -468,7 +465,7 @@ export const logout = async (_req: AuthRequest, res: Response) => {
     res.clearCookie('accessToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
 
     return res.status(200).json({

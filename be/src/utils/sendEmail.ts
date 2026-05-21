@@ -1,5 +1,8 @@
 import nodemailer from 'nodemailer';
 
+const normalizeEmailAddress = (value?: string) => (value || '').replace(/[<>]/g, '').trim();
+const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
+
 /**
  * Email Utility - Handles sending emails using Nodemailer
  * Supports both Gmail SMTP and generic SMTP configuration
@@ -16,8 +19,8 @@ const createTransporter = () => {
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.GMAIL_EMAIL,
-        pass: process.env.GMAIL_APP_PASSWORD, // Use Google App Password, not regular password
+        user: normalizeEmailAddress(process.env.GMAIL_EMAIL),
+        pass: normalizeAppPassword(process.env.GMAIL_APP_PASSWORD), // Use Google App Password, not regular password
       },
     });
   }
@@ -46,7 +49,7 @@ export const sendVerificationOTP = async (
     const transporter = createTransporter();
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.GMAIL_EMAIL,
+      from: normalizeEmailAddress(process.env.EMAIL_FROM) || normalizeEmailAddress(process.env.GMAIL_EMAIL),
       to: email,
       subject: 'JC-Ticket - Email Verification OTP',
       html: `
@@ -109,7 +112,7 @@ export const sendPasswordResetOTP = async (
     const transporter = createTransporter();
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.GMAIL_EMAIL,
+      from: normalizeEmailAddress(process.env.EMAIL_FROM) || normalizeEmailAddress(process.env.GMAIL_EMAIL),
       to: email,
       subject: 'JC-Ticket - Password Reset OTP',
       html: `
