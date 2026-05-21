@@ -9,16 +9,29 @@ import { IEvent } from '../models/Event';
  * Gửi email xác nhận vé cho khách hàng sau khi thanh toán thành công
  */
 
+const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
+
 const createTransporter = () => {
   const emailService = process.env.EMAIL_SERVICE || 'gmail';
 
   if (emailService === 'gmail') {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      // Port 587 + STARTTLS - works on Render/cloud providers
+      // Port 465 (SSL) is often blocked by cloud hosting firewalls
+      port: 587,
+      secure: false,      // false = STARTTLS (upgrades to TLS after connect)
+      requireTLS: true,
       auth: {
-        user: process.env.GMAIL_EMAIL,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: normalizeAppPassword(process.env.GMAIL_EMAIL),
+        pass: normalizeAppPassword(process.env.GMAIL_APP_PASSWORD),
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 20000,
+      greetingTimeout: 15000,
+      socketTimeout: 25000,
     });
   }
 

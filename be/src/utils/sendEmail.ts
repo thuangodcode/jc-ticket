@@ -2,7 +2,8 @@ import nodemailer from 'nodemailer';
 
 const normalizeEmailAddress = (value?: string) => (value || '').replace(/[<>]/g, '').trim();
 const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
-const EMAIL_SEND_TIMEOUT_MS = 10000;
+// Tăng timeout lên 30s - cloud SMTP có latency cao hơn local
+const EMAIL_SEND_TIMEOUT_MS = 30000;
 
 const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -42,12 +43,21 @@ const createTransporter = () => {
 
     return nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      // Port 587 + STARTTLS - works on Render/Vercel/most cloud providers
+      // Port 465 (SSL) is often blocked by cloud hosting firewalls
+      port: 587,
+      secure: false,      // false = STARTTLS (upgrades to TLS after connect)
+      requireTLS: true,   // Force TLS upgrade - rejects if server doesn't support
       auth: {
         user: gmailUser,
-        pass: gmailPass, // Use Google App Password, not regular password
+        pass: gmailPass,  // Google App Password (không phải password thường)
       },
+      tls: {
+        rejectUnauthorized: false, // Bỏ qua cert errors trong môi trường cloud
+      },
+      connectionTimeout: 20000,  // 20s để kết nối
+      greetingTimeout: 15000,    // 15s chờ SMTP greeting
+      socketTimeout: 25000,      // 25s socket idle timeout
     });
   }
 
