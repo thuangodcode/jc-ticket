@@ -54,7 +54,7 @@ function HomePage() {
   const navigate = useNavigate();
   const handleSearch = (filters: SearchFilters) => { console.log('Search:', filters); };
   const handleCategoryClick = (category: Category) => { console.log('Category:', category); };
-  const handleEventClick = () => { navigate('/events'); };
+  const handleEventClick = (event: any) => { navigate(`/events/${event.id}`); };
   const handleFestivalClick = () => { console.log('Festival selected'); };
   const handleSubscribe = (email: string) => { console.log('Subscribe:', email); };
 
