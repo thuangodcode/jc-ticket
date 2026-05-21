@@ -1,10 +1,10 @@
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthModalProvider } from './contexts/AuthModalContext';
 import { UserAuthProvider } from './contexts/UserAuthContext';
-import AuthModal from './components/AuthModal';
+const AuthModal = lazy(() => import('./components/AuthModal'));
 
 // Homepage Components
 import {
@@ -13,19 +13,19 @@ import {
 } from './components';
 
 // Pages
-import EventsPage from './pages/EventsPage';
-import EventDetailPage from './pages/EventDetailPage';
-import CheckoutPage from './pages/CheckoutPage';
-import PaymentResultPage from './pages/PaymentResultPage';
-import MyTicketsPage from './pages/MyTicketsPage';
-import TicketDetailPage from './pages/TicketDetailPage';
+const EventsPage = lazy(() => import('./pages/EventsPage'));
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
+const MyTicketsPage = lazy(() => import('./pages/MyTicketsPage'));
+const TicketDetailPage = lazy(() => import('./pages/TicketDetailPage'));
 
 // Admin Pages
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminOrders from './pages/admin/AdminOrders';
-import AdminTickets from './pages/admin/AdminTickets';
-import AdminEvents from './pages/admin/AdminEvents';
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
+const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
+const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -85,7 +85,6 @@ function HomePage() {
       <Testimonials />
       <Newsletter onSubscribe={handleSubscribe} />
       <Footer />
-      <AuthModal />
     </div>
   );
 }
@@ -97,25 +96,33 @@ function AppContent() {
   return (
     <>
       <ScrollToTop />
-      <Routes>
-        {/* Public Pages */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:id" element={<EventDetailPage />} />
-        <Route path="/checkout/:bookingId" element={<CheckoutPage />} />
-        <Route path="/payment/result" element={<PaymentResultPage />} />
-        <Route path="/my-tickets" element={<MyTicketsPage />} />
-        <Route path="/my-tickets/:ticketCode" element={<TicketDetailPage />} />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-white text-ink">
+            <div className="w-12 h-12 border-4 border-akai border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <Routes>
+          {/* Public Pages */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:id" element={<EventDetailPage />} />
+          <Route path="/checkout/:bookingId" element={<CheckoutPage />} />
+          <Route path="/payment/result" element={<PaymentResultPage />} />
+          <Route path="/my-tickets" element={<MyTicketsPage />} />
+          <Route path="/my-tickets/:ticketCode" element={<TicketDetailPage />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="tickets" element={<AdminTickets />} />
-          <Route path="events" element={<AdminEvents />} />
-        </Route>
-      </Routes>
-      <AuthModal />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="tickets" element={<AdminTickets />} />
+            <Route path="events" element={<AdminEvents />} />
+          </Route>
+        </Routes>
+        <AuthModal />
+      </Suspense>
     </>
   );
 }

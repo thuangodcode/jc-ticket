@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CreditCard, Shield, Clock } from 'lucide-react';
+import { ArrowLeft, Shield, Clock } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { bookingService } from '../services/bookingService';
 import { paymentService } from '../services/paymentService';
