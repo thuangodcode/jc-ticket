@@ -81,15 +81,9 @@ export const register = async (req: any, res: Response) => {
     });
 
     // Send verification OTP email
-    let emailSent = true;
-    try {
-      await sendVerificationOTP(email, name, otp);
-    } catch (emailError) {
-      console.error('Failed to send verification OTP email:', emailError);
-      emailSent = false;
-    }
+    await sendVerificationOTP(email, name, otp);
 
-    // Don't return password or OTP in response normally, but provide it if email sending failed
+    // Don't return password or OTP
     const userResponse = newUser.toObject();
     delete (userResponse as any).password;
     delete (userResponse as any).verificationOTP;
@@ -97,14 +91,11 @@ export const register = async (req: any, res: Response) => {
 
     return res.status(201).json({
       success: true,
-      message: emailSent
-        ? 'Registration successful. Check your email for verification OTP.'
-        : `Registration successful. (Email service failed, please use OTP: ${otp})`,
+      message: 'Registration successful. Check your email for verification OTP.',
       data: {
         email: userResponse.email,
         phone: userResponse.phone,
         requiresVerification: true,
-        otp: emailSent ? undefined : otp,
       },
     });
   } catch (error: any) {
@@ -325,20 +316,11 @@ export const forgotPassword = async (req: any, res: Response) => {
     );
 
     // Send reset OTP email
-    let emailSent = true;
-    try {
-      await sendPasswordResetOTP(email, user.name, otp);
-    } catch (emailError) {
-      console.error('Failed to send password reset OTP email:', emailError);
-      emailSent = false;
-    }
+    await sendPasswordResetOTP(email, user.name, otp);
 
     return res.status(200).json({
       success: true,
-      message: emailSent
-        ? 'Password reset OTP has been sent to your email.'
-        : `Password reset OTP generated. (Email service failed, please use OTP: ${otp})`,
-      otp: emailSent ? undefined : otp,
+      message: 'Password reset OTP has been sent to your email.',
     });
   } catch (error: any) {
     console.error('Forgot password error:', error);

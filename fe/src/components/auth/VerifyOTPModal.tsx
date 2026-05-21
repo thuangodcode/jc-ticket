@@ -16,7 +16,7 @@ const VerifyOTPModal: React.FC = () => {
   const { switchModal, modalData, closeModal } = useAuthModal();
   const { login: autoLogin, isLoading: authLoading } = useUserAuth();
 
-  const [otp, setOtp] = useState(modalData?.otp || '');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -100,7 +100,7 @@ const VerifyOTPModal: React.FC = () => {
             position: 'top-center',
           });
           setTimeout(() => {
-            switchModal('reset-password', { email, flow: 'password-reset' });
+            switchModal('reset-password', { email, flow: 'password-reset', otp: otpToVerify });
           }, 1000);
         }
       }
@@ -121,17 +121,6 @@ const VerifyOTPModal: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  // Auto-verify if OTP is pre-filled (due to fallback on email failure)
-  useEffect(() => {
-    if (modalData?.otp && modalData.otp.length === 6) {
-      setOtp(modalData.otp);
-      const timer = setTimeout(() => {
-        handleVerifyOTP(modalData.otp);
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [modalData?.otp]);
 
   const handleResendOTP = async () => {
     if (timeLeft > 300) return; // Chỉ cho phép resend khi còn dưới 5 phút

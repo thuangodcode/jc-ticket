@@ -1,5 +1,6 @@
 import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import QRCode from 'qrcode';
 import { ITicket } from '../models/Ticket';
 import { IBooking } from '../models/Booking';
@@ -8,7 +9,7 @@ import { IEvent } from '../models/Event';
 /**
  * Ticket Email Utility
  * Gửi email xác nhận vé cho khách hàng sau khi thanh toán thành công
- * PRIMARY: SendGrid HTTP API | FALLBACK: Nodemailer SMTP
+ * PRIMARY: Resend HTTP API | SECONDARY: SendGrid HTTP API | FALLBACK: Nodemailer SMTP
  */
 
 const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
@@ -18,7 +19,18 @@ const FROM_ADDRESS =
   `JC-Ticket <${process.env.GMAIL_EMAIL || 'noreply@jcticket.app'}>`;
 
 const sendEmailInternal = async (to: string, subject: string, html: string): Promise<void> => {
-  // Primary: SendGrid HTTP API (không bị block trên Render free tier)
+  // Primary: Resend HTTP API (không bị block trên Render free tier)
+  if (process.env.RESEND_API_KEY) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const response = await resend.emails.send({ to, from: FROM_ADDRESS, subject, html });
+    if (response.error) {
+      throw new Error(`Resend error: ${response.error.message}`);
+    }
+    console.log(`✅ [Resend] Ticket email sent to ${to}`);
+    return;
+  }
+
+  // Secondary: SendGrid HTTP API (không bị block trên Render free tier)
   if (process.env.SENDGRID_API_KEY) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     await sgMail.send({ to, from: FROM_ADDRESS, subject, html });
@@ -27,7 +39,7 @@ const sendEmailInternal = async (to: string, subject: string, html: string): Pro
   }
 
   // Fallback: Nodemailer SMTP
-  console.warn('⚠️ SENDGRID_API_KEY not set, using Nodemailer SMTP fallback');
+  console.warn('⚠️ RESEND_API_KEY and SENDGRID_API_KEY not set, using Nodemailer SMTP fallback');
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,

@@ -69,7 +69,7 @@ const ResetPasswordModal: React.FC = () => {
       // Note: OTP is already verified in the previous step
       const response = await resetPasswordService({
         email,
-        otp: '', // OTP was already verified in verify-otp step
+        otp: modalData?.otp || '',
         newPassword: formData.password,
       });
 

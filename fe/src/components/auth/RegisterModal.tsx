@@ -74,25 +74,15 @@ const RegisterModal: React.FC = () => {
       });
 
       if (response.success) {
-        // Check if backend returned OTP due to email sending failure
-        const fallbackOtp = response.data?.otp;
-        if (fallbackOtp) {
-          toast.success(`⚠️ Đăng ký thành công! (Dịch vụ email lỗi, mã OTP là: ${fallbackOtp})`, {
-            duration: 10000,
-            position: 'top-center',
-          });
-        } else {
-          toast.success('📧 Mã xác thực OTP đã được gửi đến email của bạn!', {
-            duration: 3000,
-            position: 'top-center',
-          });
-        }
+        toast.success('📧 Mã xác thực OTP đã được gửi đến email của bạn!', {
+          duration: 3000,
+          position: 'top-center',
+        });
 
         switchModal('verify-otp', { 
           email: formData.email,
           password: formData.password,
           flow: 'registration',
-          otp: fallbackOtp
         });
       }
     } catch (err: unknown) {

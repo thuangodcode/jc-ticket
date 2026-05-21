@@ -1,5 +1,6 @@
 import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const normalizeEmailAddress = (value?: string) => (value || '').replace(/[<>]/g, '').trim();
 const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
@@ -27,11 +28,14 @@ const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> =>
 /**
  * === EMAIL PROVIDER STRATEGY ===
  *
- * PRIMARY:  SendGrid HTTP API  (SENDGRID_API_KEY set)
+ * PRIMARY:   Resend HTTP API   (RESEND_API_KEY set)
  *           → Works on Render free tier (HTTP, không dùng SMTP port)
+ *           → 3000 emails/month free
+ *
+ * SECONDARY: SendGrid HTTP API  (SENDGRID_API_KEY set)
  *           → 100 emails/day free
  *
- * FALLBACK: Nodemailer SMTP   (khi không có SENDGRID_API_KEY)
+ * FALLBACK:  Nodemailer SMTP   (khi không có các API key trên)
  *           → Hoạt động local, có thể bị block trên Render free tier
  */
 
@@ -44,6 +48,28 @@ interface MailPayload {
 const FROM_ADDRESS =
   process.env.EMAIL_FROM ||
   `JC-Ticket <${process.env.GMAIL_EMAIL || 'noreply@jcticket.app'}>`;
+
+/**
+ * Gửi email qua Resend HTTP API
+ * Không dùng SMTP port → luôn hoạt động trên cloud
+ */
+const sendViaResend = async ({ to, subject, html }: MailPayload): Promise<void> => {
+  const apiKey = process.env.RESEND_API_KEY!;
+  const resend = new Resend(apiKey);
+
+  const response = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to,
+    subject,
+    html,
+  });
+
+  if (response.error) {
+    throw new Error(`Resend error: ${response.error.message}`);
+  }
+
+  console.log(`✅ [Resend] Email sent to ${to}`);
+};
 
 /**
  * Gửi email qua SendGrid HTTP API
@@ -95,10 +121,13 @@ const sendViaNodemailer = async ({ to, subject, html }: MailPayload): Promise<vo
  * Core email sender - auto-selects provider
  */
 const sendEmail = async (payload: MailPayload): Promise<void> => {
+  if (process.env.RESEND_API_KEY) {
+    return sendViaResend(payload);
+  }
   if (process.env.SENDGRID_API_KEY) {
     return sendViaSendGrid(payload);
   }
-  console.warn('⚠️ SENDGRID_API_KEY not set, falling back to Nodemailer SMTP (may fail on Render)');
+  console.warn('⚠️ RESEND_API_KEY and SENDGRID_API_KEY not set, falling back to Nodemailer SMTP (may fail on Render)');
   return sendViaNodemailer(payload);
 };
 
