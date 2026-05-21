@@ -127,9 +127,9 @@ export const UpcomingEvents: React.FC<UpcomingEventsProps> = ({
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between mb-12"
+          className="flex flex-col items-center text-center mb-12"
         >
-          <div>
+          <div className="max-w-3xl mx-auto">
             <h2 className={`text-4xl md:text-5xl font-bold font-elegant mb-4 ${
               isDark 
                 ? 'text-white' 
@@ -137,7 +137,7 @@ export const UpcomingEvents: React.FC<UpcomingEventsProps> = ({
             }`}>
               {t('events.title')}
             </h2>
-            <p className={`text-lg max-w-2xl ${
+            <p className={`text-lg max-w-2xl mx-auto ${
               isDark 
                 ? 'text-zinc-400' 
                 : 'text-charcoal/70'
@@ -149,7 +149,7 @@ export const UpcomingEvents: React.FC<UpcomingEventsProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onViewAll}
-            className="mt-6 md:mt-0 btn-ghost flex items-center space-x-2"
+            className="mt-6 btn-ghost flex items-center space-x-2"
           >
             <span>{t('events.viewAll')}</span>
             <ArrowRight size={18} />

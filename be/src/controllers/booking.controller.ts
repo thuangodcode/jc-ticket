@@ -96,10 +96,10 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Reserve seats trên event (atomic)
-    event.seatMap.reservedSeats.push(...selectedSeats);
-    event.availableSeats -= selectedSeats.length;
-    await event.save({ session });
+    // NOTE: Seats are NOT reserved here. Reservation happens when
+    // the user starts the payment process (to keep seats visible
+    // until payment is actually initiated). We still validate
+    // availability above so the frontend can show conflicts early.
 
     // Tạo booking
     const booking = new Booking({
@@ -225,7 +225,7 @@ export const adminConfirmBookingPayment = async (req: AuthRequest, res: Response
 
     const { booking, tickets, alreadyConfirmed } = await confirmBookingAndIssueTickets({
       bookingId,
-      paymentMethod: 'bank_transfer',
+      paymentMethod: 'payos',
       skipIfAlreadySuccessful: true,
     });
 
@@ -267,6 +267,12 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
     if (booking.status === 'cancelled') {
       await session.abortTransaction();
       return res.status(400).json({ success: false, message: 'Booking already cancelled' });
+    }
+
+    // Prevent regular users from cancelling already-paid bookings
+    if (booking.paymentStatus === 'successful' && req.user?.role !== 'admin') {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Cannot cancel a booking that has been paid. Contact support.' });
     }
 
     // Trả lại ghế cho event

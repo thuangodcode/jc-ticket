@@ -11,9 +11,10 @@ export interface IBooking extends Document {
   selectedSeats: string[];      // Ghế đã chọn: ["A1", "A2", "B3"]
   totalPrice: number;
   passengerInfo: IPassengerInfo;
-  paymentMethod?: 'vnpay' | 'zalopay' | 'wallet' | 'bank_transfer';
+  paymentMethod?: 'payos';
   paymentStatus: 'pending' | 'successful' | 'failed' | 'refunded';
   paymentId?: string;           // Transaction ID từ payment gateway
+  payosOrderCode?: number;      // Unique order code for PayOS (64-bit int)
   status: 'pending' | 'confirmed' | 'cancelled';
   confirmedAt?: Date;
   cancelledAt?: Date;
@@ -118,7 +119,7 @@ const bookingSchema = new Schema<IBooking>(
     },
     paymentMethod: {
       type: String,
-      enum: ['vnpay', 'zalopay', 'wallet', 'bank_transfer'],
+      enum: ['payos'],
     },
     paymentStatus: {
       type: String,
@@ -128,6 +129,11 @@ const bookingSchema = new Schema<IBooking>(
     },
     paymentId: {
       type: String,
+    },
+    payosOrderCode: {
+      type: Number,
+      unique: true,
+      sparse: true,
     },
     status: {
       type: String,

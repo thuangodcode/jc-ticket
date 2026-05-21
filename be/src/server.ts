@@ -13,6 +13,8 @@ import ticketRoutes from './routes/ticket.routes';
 import paymentRoutes from './routes/payment.routes';
 import uploadRoutes from './routes/upload';
 import { globalErrorHandler } from './middleware/auth';
+import { Booking } from './models/Booking';
+import { Event } from './models/Event';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -109,4 +111,64 @@ app.listen(PORT, () => {
   console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 API Routes: /api/auth, /api/events, /api/bookings, /api/tickets, /api/payment`);
+  // Background job: cancel expired pending bookings and release seats
+  const cancelExpiredBookings = async () => {
+    try {
+      const now = new Date();
+      const expired = await Booking.find({ status: 'pending', expiresAt: { $lt: now } });
+      if (!expired.length) return;
+
+      for (const b of expired) {
+        if (b.paymentStatus === 'successful') continue; // never cancel successful
+
+        const session = await (await import('mongoose')).startSession();
+        session.startTransaction();
+        try {
+          const fresh = await Booking.findById(b._id).session(session);
+          if (!fresh) {
+            await session.abortTransaction();
+            session.endSession();
+            continue;
+          }
+
+          const event = await Event.findById(fresh.eventId).session(session);
+          if (event) {
+            const seatsToRelease = Array.isArray(fresh.selectedSeats) ? fresh.selectedSeats : [];
+            event.seatMap.reservedSeats = event.seatMap.reservedSeats.filter(
+              (s: string) => !seatsToRelease.includes(s)
+            );
+            event.availableSeats = Math.min(event.totalSeats, event.availableSeats + seatsToRelease.length);
+            await event.save({ session });
+          }
+
+          // Update booking without running full document validation to avoid errors
+          // if some historical bookings have missing fields. Use updateOne with session.
+          await Booking.updateOne(
+            { _id: fresh._id },
+            {
+              $set: {
+                status: 'cancelled',
+                paymentStatus: fresh.paymentStatus === 'successful' ? 'successful' : 'failed',
+                cancelledAt: new Date(),
+              },
+            },
+            { session }
+          );
+
+          await session.commitTransaction();
+          session.endSession();
+          console.log(`🗑️ Auto-cancelled expired booking ${fresh.bookingCode}`);
+        } catch (err) {
+          await session.abortTransaction();
+          session.endSession();
+          console.error('Error auto-cancelling booking:', err);
+        }
+      }
+    } catch (err) {
+      console.error('Error in cancelExpiredBookings job:', err);
+    }
+  };
+
+  // Run every minute
+  setInterval(cancelExpiredBookings, 60 * 1000);
 });

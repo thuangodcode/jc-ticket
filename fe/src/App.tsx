@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthModalProvider } from './contexts/AuthModalContext';
@@ -32,23 +33,55 @@ interface Category { id: string; name: string; icon: string; count: number; colo
 interface Event { id: string; title: string; image: string; date: string; location: string; price: number; attendees: number; rating: number; category: string; }
 interface Festival { id: string; name: string; image: string; description: string; date: string; highlight: string; }
 
+function ScrollToTop() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash) {
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [location.pathname, location.hash]);
+
+  return null;
+}
+
 /**
  * Homepage Component
  */
 function HomePage() {
   const { isDark } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
   const handleSearch = (filters: SearchFilters) => { console.log('Search:', filters); };
   const handleCategoryClick = (category: Category) => { console.log('Category:', category); };
-  const handleEventClick = (_event: Event) => { window.location.href = `/events`; };
+  const handleEventClick = (_event: Event) => { navigate('/events'); };
   const handleFestivalClick = (_festival: Festival) => { console.log('Festival selected'); };
   const handleSubscribe = (email: string) => { console.log('Subscribe:', email); };
+
+  useEffect(() => {
+    const hash = location.hash.replace('#', '');
+    if (!hash) return;
+
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(hash);
+      if (element) {
+        const yOffset = 88;
+        const y = element.getBoundingClientRect().top + window.scrollY - yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [location.hash]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-ink text-cream' : 'bg-white text-ink'}`}>
       <Navbar onSearchClick={() => window.scrollTo({ top: 600, behavior: 'smooth' })} />
-      <HeroBanner onExploreClick={() => window.location.href = '/events'} onTicketClick={() => window.scrollTo({ top: 3800, behavior: 'smooth' })} onSearch={handleSearch} />
+      <HeroBanner onExploreClick={() => navigate('/events')} onTicketClick={() => window.scrollTo({ top: 3800, behavior: 'smooth' })} onSearch={handleSearch} />
       <Categories onCategoryClick={handleCategoryClick} />
-      <UpcomingEvents onEventClick={handleEventClick} onViewAll={() => window.location.href = '/events'} />
+      <UpcomingEvents onEventClick={handleEventClick} onViewAll={() => navigate('/events')} />
       <FeaturedFestivals onFestivalClick={handleFestivalClick} />
       <WhyUs />
       <Testimonials />
@@ -65,6 +98,7 @@ function HomePage() {
 function AppContent() {
   return (
     <>
+      <ScrollToTop />
       <Routes>
         {/* Public Pages */}
         <Route path="/" element={<HomePage />} />

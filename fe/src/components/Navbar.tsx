@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, Moon, Sun, Globe, LogOut, User, Ticket, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -22,15 +22,55 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
   const { isDark, toggleDark } = useTheme();
   const { openModal } = useAuthModal();
   const { user, isAuthenticated, logout, isLoading } = useUserAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   console.log('🎨 Navbar render:', { user, isAuthenticated, isLoading });
 
   const menuItems = [
-    { key: 'navbar.home', href: '#' },
-    { key: 'navbar.categories', href: '#categories' },
-    { key: 'navbar.events', href: '#events' },
-    { key: 'navbar.contact', href: '#contact' },
+    { key: 'navbar.home', target: 'home' },
+    { key: 'navbar.categories', target: 'categories' },
+    { key: 'navbar.events', target: 'events' },
+    { key: 'navbar.contact', target: 'contact' },
   ];
+
+  const scrollToSection = (sectionId?: string) => {
+    if (!sectionId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const yOffset = 88;
+      const y = element.getBoundingClientRect().top + window.scrollY - yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
+  const handleMenuClick = (target: string) => {
+    setIsOpen(false);
+    setIsUserMenuOpen(false);
+
+    if (target === 'events') {
+      if (location.pathname === '/events') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        navigate('/events');
+      }
+      return;
+    }
+
+    const sectionId = target === 'home' ? '' : target;
+
+    if (location.pathname !== '/') {
+      navigate('/');
+      window.setTimeout(() => scrollToSection(sectionId), 50);
+      return;
+    }
+
+    scrollToSection(sectionId);
+  };
 
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
@@ -59,7 +99,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
   };
 
   return (
-    <nav className={`fixed top-0 w-full transition-colors duration-300 ${isDark ? 'bg-charcoal/95' : 'bg-white/95'} backdrop-blur-md z-50 border-b ${isDark ? 'border-midnight' : 'border-cream'} shadow-sm`}>
+    <nav
+      style={{ zIndex: 100000 }}
+      className={`fixed top-0 w-full transition-colors duration-300 ${isDark ? 'bg-charcoal/95' : 'bg-white/95'} backdrop-blur-md z-50 border-b ${isDark ? 'border-midnight' : 'border-cream'} shadow-sm`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -79,13 +122,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
             {menuItems.map((item) => (
-              <a
+              <button
                 key={item.key}
-                href={item.href}
+                type="button"
+                onClick={() => handleMenuClick(item.target)}
                 className={`font-medium transition-colors ${isDark ? 'text-cream hover:text-akai' : 'text-charcoal hover:text-akai'}`}
               >
                 {t(item.key)}
-              </a>
+              </button>
             ))}
           </div>
 
@@ -350,14 +394,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
             className={`md:hidden pb-4 border-t ${isDark ? 'border-midnight' : 'border-cream'}`}
           >
             {menuItems.map((item) => (
-              <a
+              <button
                 key={item.key}
-                href={item.href}
+                type="button"
+                onClick={() => handleMenuClick(item.target)}
                 className={`block px-4 py-2 rounded-lg transition-colors ${isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'}`}
-                onClick={() => setIsOpen(false)}
               >
                 {t(item.key)}
-              </a>
+              </button>
             ))}
             <div
               className={`px-4 py-3 space-y-2 border-t ${

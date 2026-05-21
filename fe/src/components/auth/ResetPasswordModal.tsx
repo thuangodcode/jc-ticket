@@ -62,10 +62,7 @@ const ResetPasswordModal: React.FC = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Mật khẩu phải từ 6 ký tự trở lên');
-      return;
-    }
+    // No minimum length restriction — backend will accept any non-empty password
 
     setIsLoading(true);
     try {

@@ -86,7 +86,10 @@ export const Categories: React.FC<CategoriesProps> = ({ onCategoryClick }) => {
   };
 
   return (
-    <section className={`py-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${isDark ? 'bg-gradient-to-b from-black via-gray-950 to-black' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+    <section
+      id="categories"
+      className={`scroll-mt-24 py-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${isDark ? 'bg-gradient-to-b from-black via-gray-950 to-black' : 'bg-gradient-to-b from-white to-gray-50'}`}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <motion.div

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CreditCard, Wallet, Building2, Shield, Clock } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Clock } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { bookingService } from '../services/bookingService';
 import { paymentService } from '../services/paymentService';
@@ -18,7 +18,6 @@ export default function CheckoutPage() {
 
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'zalopay' | 'bank_transfer'>('vnpay');
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -40,60 +39,16 @@ export default function CheckoutPage() {
     fetchBooking();
   }, [bookingId]);
 
-  const paymentMethods = [
-    {
-      id: 'vnpay' as const,
-      name: 'VNPay',
-      desc: 'Thanh toán qua VNPay (ATM/Visa/MasterCard)',
-      icon: <CreditCard size={24} />,
-      color: 'from-blue-500 to-blue-700',
-      logo: '🏦',
-    },
-    {
-      id: 'zalopay' as const,
-      name: 'ZaloPay',
-      desc: 'Thanh toán qua ví ZaloPay',
-      icon: <Wallet size={24} />,
-      color: 'from-blue-400 to-cyan-500',
-      logo: '💳',
-    },
-    {
-      id: 'bank_transfer' as const,
-      name: 'Chuyển khoản',
-      desc: 'Chuyển khoản ngân hàng (xác nhận thủ công)',
-      icon: <Building2 size={24} />,
-      color: 'from-green-500 to-emerald-600',
-      logo: '🏧',
-    },
-  ];
-
   const handlePayment = async () => {
     if (!booking) return;
     setProcessing(true);
 
     try {
-      if (paymentMethod === 'vnpay') {
-        const res = await paymentService.createVNPayOrder(bookingId!);
-        if (res.success && res.data.orderUrl) {
-          window.location.href = res.data.orderUrl;
-        } else {
-          toast.error('Không thể tạo đơn VNPay');
-        }
-      } else if (paymentMethod === 'zalopay') {
-        const res = await paymentService.createZaloPayOrder(bookingId!);
-        if (res.success && res.data.orderUrl) {
-          window.location.href = res.data.orderUrl;
-        } else {
-          toast.error('Không thể tạo đơn ZaloPay');
-        }
-      } else if (paymentMethod === 'bank_transfer') {
-        await paymentService.processPayment({
-          bookingId: bookingId!,
-          paymentMethod: 'bank_transfer',
-          amount: booking.totalPrice,
-        });
-        toast.success('Đơn hàng đã được ghi nhận. Vui lòng chuyển khoản và chờ xác nhận.');
-        navigate('/my-tickets');
+      const res = await paymentService.createPayOSOrder(bookingId!);
+      if (res.success && res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+      } else {
+        toast.error('Không thể tạo đơn PayOS');
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Thanh toán thất bại';
@@ -133,39 +88,21 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left: Payment Method Selection */}
           <div className="lg:col-span-3 space-y-4">
-            <h2 className="text-lg font-bold mb-3">Chọn phương thức thanh toán</h2>
+            <h2 className="text-lg font-bold mb-3">Thanh toán qua PayOS</h2>
 
-            {paymentMethods.map((method) => (
-              <motion.div
-                key={method.id}
-                whileHover={{ scale: 1.01 }}
-                onClick={() => setPaymentMethod(method.id)}
-                className={`p-5 rounded-2xl cursor-pointer transition-all border-2 ${
-                  paymentMethod === method.id
-                    ? 'border-akai shadow-lg shadow-akai/10'
-                    : isDark
-                      ? 'border-zinc-800 hover:border-zinc-600'
-                      : 'border-gray-200 hover:border-gray-300'
-                } ${isDark ? 'bg-charcoal/80' : 'bg-white'}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${method.color} flex items-center justify-center text-white text-2xl shadow-lg`}>
-                    {method.logo}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold">{method.name}</h3>
-                      {paymentMethod === method.id && (
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 bg-akai rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">✓</span>
-                        </motion.div>
-                      )}
-                    </div>
-                    <p className={`text-sm ${isDark ? 'text-cream/60' : 'text-charcoal/60'}`}>{method.desc}</p>
-                  </div>
+            <div className={`p-5 rounded-2xl border-2 border-akai shadow-lg shadow-akai/10 ${isDark ? 'bg-charcoal/80' : 'bg-white'}`}>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                  ⚡
                 </div>
-              </motion.div>
-            ))}
+                <div className="flex-1">
+                  <h3 className="font-bold">PayOS (Nhanh &amp; Tự động)</h3>
+                  <p className={`text-sm ${isDark ? 'text-cream/60' : 'text-charcoal/60'}`}>
+                    Thanh toán qua QR Code ngân hàng. Hệ thống sẽ tự xác nhận khi giao dịch hoàn tất.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Security Note */}
             <div className={`flex items-start gap-3 p-4 rounded-xl ${isDark ? 'bg-midnight/80' : 'bg-green-50'}`}>
@@ -229,7 +166,7 @@ export default function CheckoutPage() {
               {/* Timer */}
               <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${isDark ? 'bg-yellow-900/30' : 'bg-yellow-50'}`}>
                 <Clock size={16} className="text-yellow-500" />
-                <span className="text-xs text-yellow-600 font-medium">Đơn hàng hết hạn sau 30 phút</span>
+                <span className="text-xs text-yellow-600 font-medium">Đơn hàng hết hạn sau 5 phút nếu chưa thanh toán</span>
               </div>
 
               <motion.button

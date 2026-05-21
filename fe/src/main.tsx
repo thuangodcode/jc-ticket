@@ -6,6 +6,8 @@ import './i18n/config'
 import './index.css'
 import App from './App.tsx'
 
+const TOAST_TOP_OFFSET = 88
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -13,6 +15,10 @@ createRoot(document.getElementById('root')!).render(
         position="top-center"
         reverseOrder={false}
         gutter={8}
+        containerStyle={{
+          top: `${TOAST_TOP_OFFSET}px`,
+          zIndex: 100000,
+        }}
         toastOptions={{
           duration: 4000,
           style: {

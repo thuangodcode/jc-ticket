@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, ArrowRight, Ticket } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Navbar } from '../components/Navbar';
-import api from '../services/api';
 import { paymentService } from '../services/paymentService';
 
 export default function PaymentResultPage() {
@@ -16,30 +15,14 @@ export default function PaymentResultPage() {
   useEffect(() => {
     const check = async () => {
       try {
-        const source = searchParams.get('source');
-        const redirectStatus = searchParams.get('status');
-        if (source === 'vnpay' && redirectStatus !== null) {
-          setStatus(redirectStatus === '1' ? 'success' : 'failed');
+        const bookingId = searchParams.get('bookingId');
+        if (!bookingId) {
+          setStatus('failed');
           return;
         }
 
-        const vnpCode = searchParams.get('vnp_ResponseCode');
-        if (vnpCode) {
-          const res = await api.get('/api/payment/vnpay/return', { params: Object.fromEntries(searchParams.entries()) });
-          setStatus(res.data.success && vnpCode === '00' ? 'success' : 'failed');
-          return;
-        }
-        const zpAppTransId = searchParams.get('apptransid') || searchParams.get('appTransId');
-        if (zpAppTransId) {
-          const res = await paymentService.checkZaloPayStatus(zpAppTransId);
-          const zpData = res.data;
-          const isPaid = zpData?.return_code === 1 || zpData?.zp_trans_status === 1 || zpData?.zp_trans_status === '1';
-          setStatus(isPaid ? 'success' : 'failed');
-          return;
-        }
-        const zpStatus = searchParams.get('status');
-        if (zpStatus === '1' || zpStatus === 'success') { setStatus('success'); }
-        else { setStatus('failed'); }
+        const res = await paymentService.checkPayOSStatus(bookingId);
+        setStatus(res.success && res.data?.status === 'success' ? 'success' : 'failed');
       } catch { setStatus('failed'); }
     };
     check();
