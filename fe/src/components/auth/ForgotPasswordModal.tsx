@@ -37,17 +37,25 @@ const ForgotPasswordModal: React.FC = () => {
       if (response.success) {
         setSuccess(true);
 
-        // 📧 Show info toast
-        toast.success('📧 Mã OTP đã được gửi đến email của bạn!', {
-          duration: 3000,
-          position: 'top-center',
-        });
+        const fallbackOtp = response.otp;
+        if (fallbackOtp) {
+          toast.success(`⚠️ Yêu cầu thành công! (Dịch vụ email lỗi, mã OTP là: ${fallbackOtp})`, {
+            duration: 10000,
+            position: 'top-center',
+          });
+        } else {
+          toast.success('📧 Mã OTP đã được gửi đến email của bạn!', {
+            duration: 3000,
+            position: 'top-center',
+          });
+        }
 
         // After 1.5 seconds, switch to OTP verification
         setTimeout(() => {
           switchModal('verify-otp', {
             email,
             flow: 'password-reset',
+            otp: fallbackOtp
           });
         }, 1500);
       }

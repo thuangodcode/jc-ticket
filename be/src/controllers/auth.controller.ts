@@ -81,9 +81,15 @@ export const register = async (req: any, res: Response) => {
     });
 
     // Send verification OTP email
-    await sendVerificationOTP(email, name, otp);
+    let emailSent = true;
+    try {
+      await sendVerificationOTP(email, name, otp);
+    } catch (emailError) {
+      console.error('Failed to send verification OTP email:', emailError);
+      emailSent = false;
+    }
 
-    // Don't return password or OTP
+    // Don't return password or OTP in response normally, but provide it if email sending failed
     const userResponse = newUser.toObject();
     delete (userResponse as any).password;
     delete (userResponse as any).verificationOTP;
@@ -91,11 +97,14 @@ export const register = async (req: any, res: Response) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Registration successful. Check your email for verification OTP.',
+      message: emailSent
+        ? 'Registration successful. Check your email for verification OTP.'
+        : `Registration successful. (Email service failed, please use OTP: ${otp})`,
       data: {
         email: userResponse.email,
         phone: userResponse.phone,
         requiresVerification: true,
+        otp: emailSent ? undefined : otp,
       },
     });
   } catch (error: any) {
@@ -316,11 +325,20 @@ export const forgotPassword = async (req: any, res: Response) => {
     );
 
     // Send reset OTP email
-    await sendPasswordResetOTP(email, user.name, otp);
+    let emailSent = true;
+    try {
+      await sendPasswordResetOTP(email, user.name, otp);
+    } catch (emailError) {
+      console.error('Failed to send password reset OTP email:', emailError);
+      emailSent = false;
+    }
 
     return res.status(200).json({
       success: true,
-      message: 'Password reset OTP has been sent to your email.',
+      message: emailSent
+        ? 'Password reset OTP has been sent to your email.'
+        : `Password reset OTP generated. (Email service failed, please use OTP: ${otp})`,
+      otp: emailSent ? undefined : otp,
     });
   } catch (error: any) {
     console.error('Forgot password error:', error);

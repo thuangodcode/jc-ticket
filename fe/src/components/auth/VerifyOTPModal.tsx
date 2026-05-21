@@ -16,7 +16,7 @@ const VerifyOTPModal: React.FC = () => {
   const { switchModal, modalData, closeModal } = useAuthModal();
   const { login: autoLogin, isLoading: authLoading } = useUserAuth();
 
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(modalData?.otp || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -42,8 +42,9 @@ const VerifyOTPModal: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleVerifyOTP = async () => {
-    if (!otp || otp.length !== 6) {
+  const handleVerifyOTP = async (customOtp?: string) => {
+    const otpToVerify = customOtp || otp;
+    if (!otpToVerify || otpToVerify.length !== 6) {
       setError('Vui lòng nhập mã OTP 6 chữ số');
       return;
     }
@@ -55,9 +56,9 @@ const VerifyOTPModal: React.FC = () => {
       let response;
 
       if (flow === 'registration') {
-        response = await verifyRegistrationOTP({ email, otp });
+        response = await verifyRegistrationOTP({ email, otp: otpToVerify });
       } else {
-        response = await verifyResetOTP({ email, otp });
+        response = await verifyResetOTP({ email, otp: otpToVerify });
       }
 
       if (response.success) {
@@ -120,6 +121,17 @@ const VerifyOTPModal: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Auto-verify if OTP is pre-filled (due to fallback on email failure)
+  useEffect(() => {
+    if (modalData?.otp && modalData.otp.length === 6) {
+      setOtp(modalData.otp);
+      const timer = setTimeout(() => {
+        handleVerifyOTP(modalData.otp);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [modalData?.otp]);
 
   const handleResendOTP = async () => {
     if (timeLeft > 300) return; // Chỉ cho phép resend khi còn dưới 5 phút
@@ -216,10 +228,9 @@ const VerifyOTPModal: React.FC = () => {
         <span className={`text-xs ${isDark ? 'text-zinc-500' : 'text-charcoal/50'}`}>Thời gian còn lại</span>
       </motion.div>
 
-      {/* Verify Button */}
       <motion.button
         type="button"
-        onClick={handleVerifyOTP}
+        onClick={() => handleVerifyOTP()}
         disabled={isLoading || authLoading || success || otp.length !== 6}
         whileHover={!isLoading && !authLoading && !success && otp.length === 6 ? { scale: 1.02 } : {}}
         whileTap={!isLoading && !authLoading && !success && otp.length === 6 ? { scale: 0.98 } : {}}

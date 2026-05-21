@@ -12,12 +12,13 @@ interface AuthModalContextType {
     email?: string;
     password?: string; // Password passed from RegisterModal to VerifyOTPModal for auto-login
     flow?: 'registration' | 'password-reset'; // Track which flow we're in
+    otp?: string; // OTP passed to VerifyOTPModal when email fails
   };
   
   // Modal control functions
-  openModal: (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset' }) => void;
+  openModal: (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset'; otp?: string }) => void;
   closeModal: () => void;
-  switchModal: (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset' }) => void;
+  switchModal: (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset'; otp?: string }) => void;
   resetModals: () => void;
 }
 
@@ -30,9 +31,9 @@ const AuthModalContext = createContext<AuthModalContextType | undefined>(undefin
 export const AuthModalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentModal, setCurrentModal] = useState<AuthModalType>(null);
-  const [modalData, setModalData] = useState<{ email?: string; password?: string; flow?: 'registration' | 'password-reset' }>({});
+  const [modalData, setModalData] = useState<{ email?: string; password?: string; flow?: 'registration' | 'password-reset'; otp?: string }>({});
 
-  const openModal = (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset' }) => {
+  const openModal = (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset'; otp?: string }) => {
     setCurrentModal(type);
     setModalData(data || {});
     setIsOpen(true);
@@ -44,7 +45,7 @@ export const AuthModalProvider: React.FC<{ children: ReactNode }> = ({ children 
     setModalData({});
   };
 
-  const switchModal = (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset' }) => {
+  const switchModal = (type: AuthModalType, data?: { email?: string; password?: string; flow?: 'registration' | 'password-reset'; otp?: string }) => {
     // Smooth transition - no closing animation, just switch content
     setCurrentModal(type);
     if (data) {
