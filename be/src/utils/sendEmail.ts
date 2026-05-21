@@ -33,11 +33,20 @@ const createTransporter = () => {
   const emailService = process.env.EMAIL_SERVICE || 'gmail';
   
   if (emailService === 'gmail') {
+    const gmailUser = normalizeEmailAddress(process.env.GMAIL_EMAIL);
+    const gmailPass = normalizeAppPassword(process.env.GMAIL_APP_PASSWORD);
+
+    if (!gmailUser || !gmailPass) {
+      throw new Error('Missing Gmail SMTP credentials (GMAIL_EMAIL/GMAIL_APP_PASSWORD)');
+    }
+
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
-        user: normalizeEmailAddress(process.env.GMAIL_EMAIL),
-        pass: normalizeAppPassword(process.env.GMAIL_APP_PASSWORD), // Use Google App Password, not regular password
+        user: gmailUser,
+        pass: gmailPass, // Use Google App Password, not regular password
       },
     });
   }
