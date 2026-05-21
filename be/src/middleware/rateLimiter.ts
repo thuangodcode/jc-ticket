@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
  */
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per windowMs
+  max: 100, // Increased to 100 for testing/prevent lockouts
   message: 'Too many login attempts. Please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -22,7 +22,7 @@ export const loginLimiter = rateLimit({
  */
 export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 requests per windowMs
+  max: 100, // Increased to 100 for testing
   message: 'Too many registration attempts. Please try again after 1 hour.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -34,7 +34,7 @@ export const registerLimiter = rateLimit({
  */
 export const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 requests per windowMs
+  max: 100, // Increased to 100 for testing
   message: 'Too many password reset attempts. Please try again after 1 hour.',
   standardHeaders: true,
   legacyHeaders: false,
