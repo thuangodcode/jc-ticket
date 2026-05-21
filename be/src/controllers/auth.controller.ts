@@ -307,10 +307,16 @@ export const forgotPassword = async (req: any, res: Response) => {
     const otp = generateOTP();
     const otpExpires = getOTPExpirationTime();
 
-    // Update user with reset OTP
-    user.resetPasswordOTP = otp;
-    user.resetPasswordExpires = otpExpires;
-    await user.save();
+    // Update reset OTP without re-validating hidden fields like password
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          resetPasswordOTP: otp,
+          resetPasswordExpires: otpExpires,
+        },
+      }
+    );
 
     // Send reset OTP email (best effort)
     try {
