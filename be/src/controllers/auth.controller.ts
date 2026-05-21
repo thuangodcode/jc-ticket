@@ -319,7 +319,9 @@ export const forgotPassword = async (req: any, res: Response) => {
     console.error('Forgot password error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to process password reset request.',
+      message: error?.message?.includes('timed out')
+        ? 'Email service is taking too long. Please try again later.'
+        : 'Failed to process password reset request.',
       error: error.message,
     });
   }

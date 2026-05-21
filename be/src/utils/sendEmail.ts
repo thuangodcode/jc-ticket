@@ -2,6 +2,23 @@ import nodemailer from 'nodemailer';
 
 const normalizeEmailAddress = (value?: string) => (value || '').replace(/[<>]/g, '').trim();
 const normalizeAppPassword = (value?: string) => (value || '').replace(/\s+/g, '').trim();
+const EMAIL_SEND_TIMEOUT_MS = 10000;
+
+const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${EMAIL_SEND_TIMEOUT_MS}ms`)), EMAIL_SEND_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
 
 /**
  * Email Utility - Handles sending emails using Nodemailer
@@ -92,7 +109,7 @@ export const sendVerificationOTP = async (
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await withTimeout(transporter.sendMail(mailOptions), 'Verification email sending');
     console.log(`Verification OTP sent to ${email}`);
   } catch (error) {
     console.error('Error sending verification OTP:', error);
@@ -151,7 +168,7 @@ export const sendPasswordResetOTP = async (
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await withTimeout(transporter.sendMail(mailOptions), 'Password reset email sending');
     console.log(`Password reset OTP sent to ${email}`);
   } catch (error) {
     console.error('Error sending password reset OTP:', error);
