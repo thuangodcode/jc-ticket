@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { generateOTP, getOTPExpirationTime, isOTPExpired } from '../utils/otp';
-import { sendVerificationOTP, sendPasswordResetOTP } from '../utils/sendEmail';
+import { sendPasswordResetOTP } from '../utils/sendEmail';
 import {
   registerSchema,
   loginSchema,
@@ -59,71 +59,40 @@ export const register = async (req: any, res: Response) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      if (!existingUser.isVerified) {
-        // Generate new OTP
-        const otp = generateOTP();
-        const otpExpires = getOTPExpirationTime();
-
-        // Update existing user with new OTP and other details if modified
-        existingUser.verificationOTP = otp;
-        existingUser.verificationOTPExpires = otpExpires;
-        if (name) existingUser.name = name;
-        if (phone) existingUser.phone = phone;
-        existingUser.password = password; // update password in case they want to change it
-
-        await existingUser.save();
-
-        // Send verification OTP email
-        await sendVerificationOTP(email, existingUser.name, otp);
-
-        return res.status(200).json({
-          success: true,
-          message: 'Email already registered but not verified. A new verification OTP has been sent.',
-          data: {
-            email: existingUser.email,
-            phone: existingUser.phone,
-            requiresVerification: true,
-          },
-        });
-      }
-
       return res.status(409).json({
         success: false,
         message: 'Email already registered. Please log in or use a different email.',
       });
     }
 
-    // Generate OTP
-    const otp = generateOTP();
-    const otpExpires = getOTPExpirationTime();
-
-    // Create new user (not verified yet)
+    // Create new user (verified immediately)
     const newUser = await User.create({
       name,
       email,
       phone,
       password,
-      isVerified: false,
-      verificationOTP: otp,
-      verificationOTPExpires: otpExpires,
+      isVerified: true,
     });
 
-    // Send verification OTP email
-    await sendVerificationOTP(email, name, otp);
+    // Generate JWT token
+    const token = generateToken(newUser._id.toString(), newUser.email, newUser.role);
 
-    // Don't return password or OTP
+    // Set httpOnly cookie
+    res.cookie('accessToken', token, getAuthCookieOptions());
+
+    // Don't return password
     const userResponse = newUser.toObject();
     delete (userResponse as any).password;
-    delete (userResponse as any).verificationOTP;
-    delete (userResponse as any).verificationOTPExpires;
 
     return res.status(201).json({
       success: true,
-      message: 'Registration successful. Check your email for verification OTP.',
+      message: 'Registration successful and logged in.',
       data: {
+        id: userResponse._id,
+        name: userResponse.name,
         email: userResponse.email,
         phone: userResponse.phone,
-        requiresVerification: true,
+        role: userResponse.role,
       },
     });
   } catch (error: any) {
@@ -343,8 +312,10 @@ export const forgotPassword = async (req: any, res: Response) => {
       }
     );
 
-    // Send reset OTP email
-    await sendPasswordResetOTP(email, user.name, otp);
+    // Send reset OTP email in the background (fire-and-forget)
+    sendPasswordResetOTP(email, user.name, otp).catch((err) => {
+      console.error('❌ [Background] Failed to send password reset OTP:', err);
+    });
 
     return res.status(200).json({
       success: true,

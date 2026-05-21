@@ -4,6 +4,7 @@ import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthModal } from '../../contexts/AuthModalContext';
+import { useUserAuth } from '../../contexts/useUserAuth';
 import { registerUser } from '../../services/authService';
 
 /**
@@ -11,7 +12,8 @@ import { registerUser } from '../../services/authService';
  */
 const RegisterModal: React.FC = () => {
   const { isDark } = useTheme();
-  const { switchModal } = useAuthModal();
+  const { switchModal, closeModal } = useAuthModal();
+  const { restoreSession } = useUserAuth();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -74,16 +76,16 @@ const RegisterModal: React.FC = () => {
       });
 
       if (response.success) {
-        toast.success('📧 Mã xác thực OTP đã được gửi đến email của bạn!', {
-          duration: 3000,
+        toast.success('🎉 Đăng ký tài khoản thành công và đã đăng nhập!', {
+          duration: 4000,
           position: 'top-center',
         });
 
-        switchModal('verify-otp', { 
-          email: formData.email,
-          password: formData.password,
-          flow: 'registration',
-        });
+        // Restore session to fetch user profile since cookie was set by register API
+        await restoreSession();
+
+        // Close the modal
+        closeModal();
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Đăng ký thất bại';
