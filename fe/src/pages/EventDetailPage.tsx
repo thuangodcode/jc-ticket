@@ -27,6 +27,7 @@ export default function EventDetailPage() {
   const [step, setStep] = useState<'seats' | 'info'>('seats');
   const [submitting, setSubmitting] = useState(false);
   const [passengerInfo, setPassengerInfo] = useState({ name: '', email: '', phone: '' });
+  const [imgSrc, setImgSrc] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -54,6 +55,12 @@ export default function EventDetailPage() {
     };
     fetchEvent();
   }, [id]);
+
+  useEffect(() => {
+    if (event?.image) {
+      setImgSrc(event.image);
+    }
+  }, [event]);
 
   // Seat map helpers
   const getRowLabel = (index: number) => String.fromCharCode(65 + index);
@@ -147,7 +154,17 @@ export default function EventDetailPage() {
 
       {/* Hero Image */}
       <div className="relative h-72 md:h-96 mt-16">
-        <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+        <img
+          src={imgSrc || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=600&fit=crop'}
+          alt={event.title}
+          onError={() => {
+            const fallback = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=600&fit=crop';
+            if (imgSrc !== fallback) {
+              setImgSrc(fallback);
+            }
+          }}
+          className="w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6">
           <button onClick={() => navigate('/events')} className="flex items-center gap-2 text-white/80 hover:text-white mb-3 text-sm">

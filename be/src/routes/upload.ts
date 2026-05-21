@@ -9,7 +9,7 @@ const router = express.Router();
  * POST /api/upload
  */
 router.post(
-  '/upload',
+  ['/upload', '/upload/upload'],
   uploadMiddleware.single('image'),
   async (req: any, res: Response): Promise<void> => {
     try {
@@ -43,7 +43,35 @@ router.post(
 );
 
 /**
- * Route để xóa hình ảnh từ Cloudinary
+ * Route để xóa hình ảnh từ Cloudinary (sử dụng query parameter để tránh lỗi giải mã đường dẫn chứa ký tự '/')
+ * DELETE /api/upload?publicId=...
+ */
+router.delete('/upload', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const publicId = req.query.publicId as string;
+
+    if (!publicId) {
+      res.status(400).json({ message: 'Public ID là bắt buộc' });
+      return;
+    }
+
+    await deleteImageFromCloudinary(publicId);
+
+    res.json({
+      success: true,
+      message: 'Xóa hình ảnh thành công',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi xóa hình ảnh',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * Route để xóa hình ảnh từ Cloudinary (fallback cho param-based cũ)
  * DELETE /api/upload/:publicId
  */
 router.delete('/upload/:publicId', async (req: Request, res: Response): Promise<void> => {

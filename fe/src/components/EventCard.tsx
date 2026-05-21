@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, Users, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +35,13 @@ export const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const { isDark } = useTheme();
+  const [imgSrc, setImgSrc] = useState(image);
+
+  useEffect(() => {
+    setImgSrc(image);
+  }, [image]);
+
+  const fallbackImage = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=600&fit=crop';
 
   return (
     <motion.div
@@ -49,8 +57,13 @@ export const EventCard: React.FC<EventCardProps> = ({
       {/* Image Container */}
       <div className="relative h-48 overflow-hidden bg-gradient-to-br from-cream to-sakura">
         <motion.img
-          src={image}
+          src={imgSrc || fallbackImage}
           alt={title}
+          onError={() => {
+            if (imgSrc !== fallbackImage) {
+              setImgSrc(fallbackImage);
+            }
+          }}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
 

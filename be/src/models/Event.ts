@@ -8,6 +8,7 @@ export interface IEvent extends Document {
   description: string;
   category: string;
   image: string;
+  imagePublicId?: string;
   date: Date;
   endDate?: Date;
   location: string;
@@ -67,6 +68,9 @@ const eventSchema = new Schema<IEvent>(
     image: {
       type: String,
       required: [true, 'Event image is required'],
+    },
+    imagePublicId: {
+      type: String,
     },
     date: {
       type: Date,
