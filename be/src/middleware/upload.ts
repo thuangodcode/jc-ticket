@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import multer from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 
 // Cấu hình lưu trữ tạm thời trong bộ nhớ
 const storage = multer.memoryStorage();
@@ -8,7 +8,7 @@ const storage = multer.memoryStorage();
 const fileFilter = (
   _req: Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback
+  cb: FileFilterCallback
 ) => {
   const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -27,3 +27,4 @@ export const uploadMiddleware = multer({
     fileSize: 5 * 1024 * 1024, // 5MB
   },
 });
+
