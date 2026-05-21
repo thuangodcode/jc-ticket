@@ -23,7 +23,9 @@ services:
       - key: GMAIL_APP_PASSWORD
         sync: false
       - key: EMAIL_FROM
-        value: JC-Ticket <120304thuan@gmail.com>
+        value: JC-Ticket <onboarding@resend.dev>
+      - key: RESEND_API_KEY
+        sync: false
       - key: EMAIL_SERVICE
         value: gmail
       - key: CLOUDINARY_CLOUD_NAME
