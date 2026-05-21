@@ -59,6 +59,34 @@ export const register = async (req: any, res: Response) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      if (!existingUser.isVerified) {
+        // Generate new OTP
+        const otp = generateOTP();
+        const otpExpires = getOTPExpirationTime();
+
+        // Update existing user with new OTP and other details if modified
+        existingUser.verificationOTP = otp;
+        existingUser.verificationOTPExpires = otpExpires;
+        if (name) existingUser.name = name;
+        if (phone) existingUser.phone = phone;
+        existingUser.password = password; // update password in case they want to change it
+
+        await existingUser.save();
+
+        // Send verification OTP email
+        await sendVerificationOTP(email, existingUser.name, otp);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Email already registered but not verified. A new verification OTP has been sent.',
+          data: {
+            email: existingUser.email,
+            phone: existingUser.phone,
+            requiresVerification: true,
+          },
+        });
+      }
+
       return res.status(409).json({
         success: false,
         message: 'Email already registered. Please log in or use a different email.',
@@ -444,8 +472,9 @@ export const resetPassword = async (req: any, res: Response) => {
       });
     }
 
-    // Update password
+    // Update password and mark email as verified (since they verified email ownership via OTP)
     user.password = newPassword;
+    user.isVerified = true;
     // user.resetPasswordOTP = undefined;
     // user.resetPasswordExpires = undefined;
     await user.save();
