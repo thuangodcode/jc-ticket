@@ -30,8 +30,6 @@ import AdminEvents from './pages/admin/AdminEvents';
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
 interface Category { id: string; name: string; icon: string; count: number; color: string; }
-interface Event { id: string; title: string; image: string; date: string; location: string; price: number; attendees: number; rating: number; category: string; }
-interface Festival { id: string; name: string; image: string; description: string; date: string; highlight: string; }
 
 function ScrollToTop() {
   const location = useLocation();
@@ -56,8 +54,8 @@ function HomePage() {
   const navigate = useNavigate();
   const handleSearch = (filters: SearchFilters) => { console.log('Search:', filters); };
   const handleCategoryClick = (category: Category) => { console.log('Category:', category); };
-  const handleEventClick = (_event: Event) => { navigate('/events'); };
-  const handleFestivalClick = (_festival: Festival) => { console.log('Festival selected'); };
+  const handleEventClick = () => { navigate('/events'); };
+  const handleFestivalClick = () => { console.log('Festival selected'); };
   const handleSubscribe = (email: string) => { console.log('Subscribe:', email); };
 
   useEffect(() => {
