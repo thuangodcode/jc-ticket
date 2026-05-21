@@ -62,7 +62,14 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       const errorMsg = err instanceof Error ? err.message : 'Failed to restore session';
       setUser(null);
       setIsAuthenticated(false);
-      console.debug('No active session', errorMsg);
+      const responseStatus =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { status?: number } }).response?.status
+          : undefined;
+
+      if (responseStatus && responseStatus !== 401) {
+        console.debug('Session restore failed', errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -226,7 +233,14 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       } catch (err) {
         if (isMounted) {
           const errorMsg = err instanceof Error ? err.message : 'Failed to restore session';
-          console.debug('No active session', errorMsg);
+          const responseStatus =
+            typeof err === 'object' && err !== null && 'response' in err
+              ? (err as { response?: { status?: number } }).response?.status
+              : undefined;
+
+          if (responseStatus && responseStatus !== 401) {
+            console.debug('Session restore failed', errorMsg);
+          }
           setUser(null);
           setIsAuthenticated(false);
         }

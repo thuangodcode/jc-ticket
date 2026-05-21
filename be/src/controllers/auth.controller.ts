@@ -80,7 +80,11 @@ export const register = async (req: any, res: Response) => {
     });
 
     // Send verification OTP email
-    await sendVerificationOTP(email, name, otp);
+    try {
+      await sendVerificationOTP(email, name, otp);
+    } catch (emailError) {
+      console.error('Verification email failed, continuing anyway:', emailError);
+    }
 
     // Don't return password or OTP
     const userResponse = newUser.toObject();
@@ -308,8 +312,12 @@ export const forgotPassword = async (req: any, res: Response) => {
     user.resetPasswordExpires = otpExpires;
     await user.save();
 
-    // Send reset OTP email
-    await sendPasswordResetOTP(email, user.name, otp);
+    // Send reset OTP email (best effort)
+    try {
+      await sendPasswordResetOTP(email, user.name, otp);
+    } catch (emailError) {
+      console.error('Reset email failed, continuing anyway:', emailError);
+    }
 
     return res.status(200).json({
       success: true,
