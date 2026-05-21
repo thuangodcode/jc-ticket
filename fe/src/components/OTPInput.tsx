@@ -117,6 +117,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
           }}
           type="text"
           inputMode="numeric"
+          autoComplete="one-time-code"
           maxLength={1}
           value={otp[index]}
           onChange={(e) => handleChange(index, e.target.value)}
