@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, MapPin, Calendar, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { eventService } from '../services/eventService';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
@@ -13,10 +13,12 @@ import { Footer } from '../components/Footer';
 export default function EventsPage() {
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const category = searchParams.get('category') || '';
+
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -29,6 +31,11 @@ export default function EventsPage() {
     { id: 'travel', label: 'Du lịch', icon: '🗻' },
     { id: 'seasonal', label: 'Theo mùa', icon: '🌸' },
   ];
+
+  // Reset page to 1 when category changes
+  useEffect(() => {
+    setPage(1);
+  }, [category]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -52,6 +59,18 @@ export default function EventsPage() {
     e.preventDefault();
     setPage(1);
     fetchEvents();
+  };
+
+  const handleCategoryChange = (catId: string) => {
+    setSearchParams((prev) => {
+      if (catId) {
+        prev.set('category', catId);
+      } else {
+        prev.delete('category');
+      }
+      prev.set('page', '1');
+      return prev;
+    });
   };
 
   return (
@@ -112,7 +131,7 @@ export default function EventsPage() {
                 key={cat.id}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => { setCategory(cat.id); setPage(1); }}
+                onClick={() => handleCategoryChange(cat.id)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                   category === cat.id
                     ? 'bg-akai text-white shadow-lg shadow-akai/30'

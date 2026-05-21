@@ -12,13 +12,14 @@ interface Category {
 
 interface CategoriesProps {
   onCategoryClick?: (category: Category) => void;
+  onViewAllClick?: () => void;
 }
 
 /**
  * Categories Section - Display different event types/genres
  * Shows popular categories with icons and event counts
  */
-export const Categories: React.FC<CategoriesProps> = ({ onCategoryClick }) => {
+export const Categories: React.FC<CategoriesProps> = ({ onCategoryClick, onViewAllClick }) => {
   const { t } = useTranslation();
   const { isDark } = useTheme();
 
@@ -193,7 +194,7 @@ export const Categories: React.FC<CategoriesProps> = ({ onCategoryClick }) => {
           viewport={{ once: true }}
           className="text-center mt-12"
         >
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={onViewAllClick}>
             {t('categories.viewAll')}
           </button>
         </motion.div>
