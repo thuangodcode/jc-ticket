@@ -19,6 +19,10 @@ import { Event } from './models/Event';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - Required for Render.com and other reverse proxies
+// Needed for: correct IP in rate limiting, secure cookies over HTTPS
+app.set('trust proxy', 1);
+
 // Security Middleware
 app.use(helmet());
 
@@ -29,6 +33,7 @@ const allowedOrigins = new Set([
   'http://localhost:5174',
   'http://localhost:5175',
   'https://jc-ticket.vercel.app',
+  'https://jc-ticket-fe.vercel.app',
 ]);
 
 const isAllowedOrigin = (origin: string) => {
@@ -36,8 +41,12 @@ const isAllowedOrigin = (origin: string) => {
     return true;
   }
 
+  // Allow all Vercel preview deployments (*.vercel.app)
   try {
     const url = new URL(origin);
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return true;
+    }
     return url.hostname.endsWith('.vercel.app');
   } catch {
     return false;

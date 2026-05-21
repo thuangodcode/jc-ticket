@@ -32,6 +32,7 @@ const getAuthCookieOptions = () => ({
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/',
 } as const);
 
 /**
@@ -469,11 +470,12 @@ export const resetPassword = async (req: any, res: Response) => {
  */
 export const logout = async (_req: AuthRequest, res: Response) => {
   try {
-    // Clear httpOnly cookie
+    // Clear httpOnly cookie - must use SAME options as when it was set
     res.clearCookie('accessToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
     });
 
     return res.status(200).json({
