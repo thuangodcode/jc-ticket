@@ -456,15 +456,43 @@ export default function AdminEventFormPage() {
                         className={`w-full px-3 py-1.5 rounded-lg border outline-none text-sm transition-all ${inputBg}`}
                       />
                     </div>
-                    <div className="w-full md:w-32">
+                    <div className="w-full md:w-36">
                       <p className="text-xs opacity-50 mb-1">Giá (VND)</p>
-                      <input
-                        type="number"
-                        value={type.price}
-                        onChange={(e) => handleTicketTypeChange(index, 'price', Number(e.target.value))}
-                        placeholder="Giá"
-                        className={`w-full px-3 py-1.5 rounded-lg border outline-none text-sm transition-all ${inputBg}`}
-                      />
+                      <div className="relative flex items-center">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={type.price !== undefined && type.price !== null && type.price !== '' ? Number(type.price).toLocaleString('vi-VN') : ''}
+                          onChange={(e) => {
+                            const rawValue = e.target.value.replace(/\D/g, '');
+                            handleTicketTypeChange(index, 'price', rawValue ? Number(rawValue) : '');
+                          }}
+                          placeholder="Giá"
+                          className={`w-full pl-3 pr-8 py-1.5 rounded-lg border outline-none text-sm transition-all ${inputBg}`}
+                        />
+                        <div className="absolute right-1.5 flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentVal = Number(type.price || 0);
+                              handleTicketTypeChange(index, 'price', currentVal + 10000);
+                            }}
+                            className="p-0.5 hover:bg-cream/20 dark:hover:bg-midnight/20 rounded text-gray-400 hover:text-akai transition-colors"
+                          >
+                            <ChevronUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentVal = Number(type.price || 0);
+                              handleTicketTypeChange(index, 'price', Math.max(0, currentVal - 10000));
+                            }}
+                            className="p-0.5 hover:bg-cream/20 dark:hover:bg-midnight/20 rounded text-gray-400 hover:text-akai transition-colors"
+                          >
+                            <ChevronDown size={13} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     <div className="w-full md:w-28">
                       <p className="text-xs opacity-50 mb-1">Số lượng</p>
@@ -473,6 +501,8 @@ export default function AdminEventFormPage() {
                         value={type.quantity}
                         onChange={(e) => handleTicketTypeChange(index, 'quantity', Number(e.target.value))}
                         placeholder="Số lượng"
+                        step={10}
+                        min={0}
                         className={`w-full px-3 py-1.5 rounded-lg border outline-none text-sm transition-all ${inputBg}`}
                       />
                     </div>
