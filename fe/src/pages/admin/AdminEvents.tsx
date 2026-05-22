@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Trash2, RefreshCw, Plus, Edit3 } from 'lucide-react';
-import EventForm from './EventForm';
 import { useTheme } from '../../contexts/ThemeContext';
 import { eventService } from '../../services/eventService';
 import toast from 'react-hot-toast';
 
 export default function AdminEvents() {
+  const navigate = useNavigate();
   const { isDark } = useTheme();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -43,7 +42,7 @@ export default function AdminEvents() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-bold">🎌 Quản lý sự kiện</h1>
         <div className="flex gap-2">
-          <button onClick={() => { setEditing(null); setShowForm(true); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-charcoal border border-zinc-700 text-cream' : 'bg-white border border-gray-200'}`}><Plus size={14}/>Tạo sự kiện</button>
+          <button onClick={() => navigate('/admin/events/create')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-charcoal border border-zinc-700 text-cream' : 'bg-white border border-gray-200'}`}><Plus size={14}/>Tạo sự kiện</button>
           <button onClick={fetchEvents} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-charcoal border border-zinc-700 text-cream' : 'bg-white border border-gray-200'}`}><RefreshCw size={14}/>Làm mới</button>
         </div>
       </div>
@@ -67,7 +66,7 @@ export default function AdminEvents() {
                   <td className="py-3 px-3"><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusColor(e.status)}`}>{e.status}</span></td>
                   <td className="py-3 px-3">
                     <div className="flex gap-1">
-                      <button onClick={() => { setEditing(e); setShowForm(true); }} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"><Edit3 size={14}/></button>
+                      <button onClick={() => navigate(`/admin/events/edit/${e._id}`)} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"><Edit3 size={14}/></button>
                       <button onClick={() => handleDelete(e._id)} className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500/30"><Trash2 size={14}/></button>
                     </div>
                   </td>
@@ -77,13 +76,6 @@ export default function AdminEvents() {
           </table>
         </div>
       </div>
-      {showForm && (
-        <EventForm
-          initial={editing}
-          onClose={() => { setShowForm(false); setEditing(null); }}
-          onSaved={() => { setShowForm(false); setEditing(null); fetchEvents(); }}
-        />
-      )}
     </div>
   );
 }

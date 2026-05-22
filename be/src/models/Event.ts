@@ -1,5 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface ITicketType {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 /**
  * Event Interface - Cấu trúc document Event
  */
@@ -23,6 +29,7 @@ export interface IEvent extends Document {
   tags: string[];
   rating: number;
   attendees: number;
+  ticketTypes?: ITicketType[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -137,6 +144,14 @@ const eventSchema = new Schema<IEvent>(
     attendees: {
       type: Number,
       default: 0,
+    },
+    ticketTypes: {
+      type: [{
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        quantity: { type: Number, required: true },
+      }],
+      default: [],
     },
   },
   {

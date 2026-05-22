@@ -26,6 +26,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
 const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
+const AdminEventFormPage = lazy(() => import('./pages/admin/AdminEventFormPage'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -120,6 +121,10 @@ function AppContent() {
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="events" element={<AdminEvents />} />
           </Route>
+
+          {/* Admin Events Creation/Editing Page */}
+          <Route path="/admin/events/create" element={<AdminEventFormPage />} />
+          <Route path="/admin/events/edit/:id" element={<AdminEventFormPage />} />
         </Routes>
         <AuthModal />
       </Suspense>
