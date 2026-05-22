@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthModal } from '../../contexts/AuthModalContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
@@ -15,6 +16,7 @@ const VerifyOTPModal: React.FC = () => {
   const { isDark } = useTheme();
   const { switchModal, modalData, closeModal } = useAuthModal();
   const { login: autoLogin, isLoading: authLoading } = useUserAuth();
+  const navigate = useNavigate();
 
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -70,8 +72,9 @@ const VerifyOTPModal: React.FC = () => {
             try {
               // Auto-login user
               const password = modalData?.password || '';
+              let loggedInUser;
               if (password) {
-                await autoLogin(email, password);
+                loggedInUser = await autoLogin(email, password);
               }
 
               // Close modal
@@ -84,6 +87,11 @@ const VerifyOTPModal: React.FC = () => {
                 duration: 4000,
                 position: 'top-center',
               });
+
+              // If admin, navigate to AdminDashboard
+              if (loggedInUser && loggedInUser.role === 'admin') {
+                navigate('/admin');
+              }
             } catch (loginErr) {
               console.error('Auto-login failed:', loginErr);
               toast.error('Xác thực OTP thành công, nhưng đăng nhập tự động thất bại. Vui lòng đăng nhập thủ công.', {

@@ -78,7 +78,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
   /**
    * Login handler
    */
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     try {
       console.log('🔄 Login attempt:', email);
       setIsLoading(true);
@@ -103,6 +103,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       setUser(userData);
       setIsAuthenticated(true);
       console.log('📝 State updated: user =', userData, ', isAuthenticated = true');
+      return userData;
     } catch (err) {
       console.error('❌ Login error:', err);
       // Extract error message safely
@@ -131,7 +132,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
    * Auto-login handler (used for OTP flow after verification)
    * Same as login but used specifically for auto-login scenarios
    */
-  const autoLogin = async (email: string, password: string) => {
+  const autoLogin = async (email: string, password: string): Promise<User> => {
     return login(email, password);
   };
 
