@@ -9,6 +9,20 @@ import { uploadService } from '../../services/uploadService';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 
+const VIETNAM_PROVINCES = [
+  'An Giang', 'Bà Rịa - Vũng Tàu', 'Bạc Liêu', 'Bắc Giang', 'Bắc Kạn', 'Bắc Ninh',
+  'Bến Tre', 'Bình Dương', 'Bình Định', 'Bình Phước', 'Bình Thuận', 'Cà Mau',
+  'Cao Bằng', 'Cần Thơ', 'Đà Nẵng', 'Đắk Lắk', 'Đắk Nông', 'Điện Biên',
+  'Đồng Nai', 'Đồng Tháp', 'Gia Lai', 'Hà Giang', 'Hà Nam', 'Hà Nội',
+  'Hà Tĩnh', 'Hải Dương', 'Hải Phòng', 'Hậu Giang', 'Hòa Bình', 'Hưng Yên',
+  'Khánh Hòa', 'Kiên Giang', 'Kon Tum', 'Lai Châu', 'Lạng Sơn', 'Lào Cai',
+  'Lâm Đồng', 'Long An', 'Nam Định', 'Nghệ An', 'Ninh Bình', 'Ninh Thuận',
+  'Phú Thọ', 'Phú Yên', 'Quảng Bình', 'Quảng Nam', 'Quảng Ngãi', 'Quảng Ninh',
+  'Quảng Trị', 'Sóc Trăng', 'Sơn La', 'Tây Ninh', 'Thái Bình', 'Thái Nguyên',
+  'Thanh Hóa', 'Thừa Thiên Huế', 'Tiền Giang', 'TP. Hồ Chí Minh', 'Trà Vinh',
+  'Tuyên Quang', 'Vĩnh Long', 'Vĩnh Phúc', 'Yên Bái'
+];
+
 export default function AdminEventFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -17,6 +31,18 @@ export default function AdminEventFormPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Local date bounds for datepicker
+  const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateString(new Date());
+  const threeYearsFromNow = new Date();
+  threeYearsFromNow.setFullYear(threeYearsFromNow.getFullYear() + 3);
+  const maxDateStr = getLocalDateString(threeYearsFromNow);
 
   // Form state
   const [form, setForm] = useState<any>({
@@ -168,6 +194,23 @@ export default function AdminEventFormPage() {
       if (!form.description.trim()) return toast.error('Vui lòng nhập mô tả sự kiện');
       if (!form.category) return toast.error('Vui lòng chọn danh mục');
       if (!form.date) return toast.error('Vui lòng chọn ngày sự kiện');
+
+      // Verify date (not earlier than today, not further than 3 years from today)
+      const selectedDate = new Date(form.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const maxDate = new Date();
+      maxDate.setFullYear(maxDate.getFullYear() + 3);
+      maxDate.setHours(23, 59, 59, 999);
+
+      if (selectedDate < today) {
+        return toast.error('Ngày sự kiện không được sớm hơn ngày hiện hành');
+      }
+      if (selectedDate > maxDate) {
+        return toast.error('Ngày sự kiện không được cách quá ngày hiện hành 3 năm');
+      }
+
       if (!form.startTime) return toast.error('Vui lòng chọn giờ bắt đầu');
       if (!form.endTime) return toast.error('Vui lòng chọn giờ kết thúc');
       if (!form.location.trim()) return toast.error('Vui lòng nhập địa điểm');
@@ -337,6 +380,8 @@ export default function AdminEventFormPage() {
                 <input
                   type="date"
                   value={form.date}
+                  min={todayStr}
+                  max={maxDateStr}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                   className={`w-full px-4 py-2.5 rounded-xl border outline-none transition-all ${inputBg}`}
                 />
@@ -376,13 +421,18 @@ export default function AdminEventFormPage() {
                 <label className={`block text-sm font-semibold mb-2 ${labelColor}`}>
                   Địa điểm (Tỉnh/Thành) <span className="text-akai">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  placeholder="Ví dụ: TP. Hồ Chí Minh"
                   className={`w-full px-4 py-2.5 rounded-xl border outline-none transition-all ${inputBg}`}
-                />
+                >
+                  <option value="">-- Chọn Tỉnh/Thành --</option>
+                  {VIETNAM_PROVINCES.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
