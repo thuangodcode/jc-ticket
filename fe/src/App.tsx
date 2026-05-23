@@ -120,11 +120,9 @@ function AppContent() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="events" element={<AdminEvents />} />
+            <Route path="events/create" element={<AdminEventFormPage />} />
+            <Route path="events/edit/:id" element={<AdminEventFormPage />} />
           </Route>
-
-          {/* Admin Events Creation/Editing Page */}
-          <Route path="/admin/events/create" element={<AdminEventFormPage />} />
-          <Route path="/admin/events/edit/:id" element={<AdminEventFormPage />} />
         </Routes>
         <AuthModal />
       </Suspense>

@@ -9,7 +9,7 @@ import { eventService } from '../services/eventService';
 import { bookingService } from '../services/bookingService';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 /**
  * EventDetailPage - Chi tiết sự kiện + Seat Map + Booking Form

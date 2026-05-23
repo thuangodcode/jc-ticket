@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { ArrowLeft, Plus, Trash2, Upload, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { eventService } from '../../services/eventService';
 import { uploadService } from '../../services/uploadService';
-import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+
 
 const VIETNAM_PROVINCES = [
   'An Giang', 'Bà Rịa - Vũng Tàu', 'Bạc Liêu', 'Bắc Giang', 'Bắc Kạn', 'Bắc Ninh',
@@ -284,43 +283,30 @@ export default function AdminEventFormPage() {
     }
   };
 
-  const containerBg = isDark ? 'bg-ink text-cream' : 'bg-gray-50 text-ink';
   const cardBg = isDark ? 'bg-charcoal/80 border-zinc-800' : 'bg-white border-gray-200';
   const inputBg = isDark ? 'bg-midnight border-zinc-700 text-cream focus:border-akai' : 'bg-white border-gray-300 text-ink focus:border-akai';
   const labelColor = isDark ? 'text-cream/80' : 'text-charcoal/80';
 
   if (loading && id) {
     return (
-      <div className={`min-h-screen ${containerBg}`}>
-        <Navbar />
-        <div className="flex items-center justify-center h-[500px] pt-16">
-          <div className="animate-spin w-12 h-12 border-4 border-akai border-t-transparent rounded-full" />
-        </div>
-        <Footer />
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin w-12 h-12 border-4 border-akai border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen flex flex-col ${containerBg}`}>
-      <Navbar />
+    <div className="max-w-3xl w-full mx-auto">
+      {/* Breadcrumb / Back Link */}
+      <button
+        onClick={() => navigate('/admin/events')}
+        className="flex items-center gap-2 text-xs font-semibold opacity-60 hover:opacity-100 transition-opacity mb-5"
+      >
+        <ArrowLeft size={14} /> Quay lại danh sách sự kiện
+      </button>
 
-      <div className="flex-1 max-w-3xl w-full mx-auto px-4 pt-24 pb-16">
-        {/* Breadcrumb / Back Link */}
-        <button
-          onClick={() => navigate('/admin/events')}
-          className="flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity mb-4"
-        >
-          <ArrowLeft size={16} /> Về Admin Dashboard
-        </button>
-
-        {/* Page Title */}
-        <h1 className="text-2xl md:text-3xl font-bold font-elegant mb-6">
-          {id ? 'Sửa thông tin sự kiện' : 'Tạo sự kiện mới'}
-        </h1>
-
-        {/* Main Card */}
-        <div className={`p-6 md:p-8 rounded-2xl shadow-xl border ${cardBg}`}>
+      {/* Main Card */}
+      <div className={`p-6 md:p-8 rounded-2xl shadow-xl border ${cardBg}`}>
           <div className="space-y-6">
             {/* Tiêu đề sự kiện */}
             <div>
@@ -718,8 +704,5 @@ export default function AdminEventFormPage() {
           </div>
         </div>
       </div>
-
-      <Footer />
-    </div>
-  );
-}
+    );
+  }

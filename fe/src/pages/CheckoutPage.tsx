@@ -6,7 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { bookingService } from '../services/bookingService';
 import { paymentService } from '../services/paymentService';
 import { Navbar } from '../components/Navbar';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 /**
  * CheckoutPage - Xác nhận đơn hàng + Chọn phương thức thanh toán

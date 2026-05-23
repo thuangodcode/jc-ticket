@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, User, Ticket } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import type { User as UserType } from '../contexts/UserAuthContext';
 import { useTheme } from '../contexts/ThemeContext';

@@ -182,11 +182,19 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
  */
 export const getAllBookings = async (req: AuthRequest, res: Response) => {
   try {
-    const { status, paymentStatus, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const { status, paymentStatus, page = '1', limit = '20', search } = req.query as Record<string, string>;
 
     const filter: any = {};
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
+    if (search) {
+      filter.$or = [
+        { bookingCode: { $regex: search, $options: 'i' } },
+        { 'passengerInfo.name': { $regex: search, $options: 'i' } },
+        { 'passengerInfo.phone': { $regex: search, $options: 'i' } },
+        { 'passengerInfo.email': { $regex: search, $options: 'i' } },
+      ];
+    }
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, parseInt(limit));
@@ -330,6 +338,134 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
       ]),
     ]);
 
+    const totalRevenue = revenueResult[0]?.total || 0;
+
+    // --- Rolling MoM Trend calculation (Last 30d vs 30d before) ---
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    // Current 30 days
+    const [
+      curBookings,
+      curPending,
+      curConfirmed,
+      curRevenueResult
+    ] = await Promise.all([
+      Booking.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      Booking.countDocuments({ paymentStatus: 'pending', createdAt: { $gte: thirtyDaysAgo } }),
+      Booking.countDocuments({ paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo } }),
+      Booking.aggregate([
+        { $match: { paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      ])
+    ]);
+    const curRevenue = curRevenueResult[0]?.total || 0;
+
+    // Previous 30 days
+    const [
+      prevBookings,
+      prevPending,
+      prevConfirmed,
+      prevRevenueResult
+    ] = await Promise.all([
+      Booking.countDocuments({ createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Booking.countDocuments({ paymentStatus: 'pending', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Booking.countDocuments({ paymentStatus: 'successful', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Booking.aggregate([
+        { $match: { paymentStatus: 'successful', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      ])
+    ]);
+    const prevRevenue = prevRevenueResult[0]?.total || 0;
+
+    const getTrend = (current: number, previous: number) => {
+      if (previous === 0) {
+        return current > 0 ? 100 : 0;
+      }
+      return parseFloat(((current - previous) / previous * 100).toFixed(1));
+    };
+
+    const trends = {
+      revenueTrend: getTrend(curRevenue, prevRevenue),
+      bookingsTrend: getTrend(curBookings, prevBookings),
+      confirmedTrend: getTrend(curConfirmed, prevConfirmed),
+      pendingTrend: getTrend(curPending, prevPending),
+    };
+
+    // --- 7-Day Daily Sales & Bookings Trend ---
+    const startOf7DaysAgo = new Date();
+    startOf7DaysAgo.setDate(startOf7DaysAgo.getDate() - 6);
+    startOf7DaysAgo.setHours(0, 0, 0, 0);
+
+    const dailyStatsRaw = await Booking.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startOf7DaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" }
+          },
+          revenue: {
+            $sum: {
+              $cond: [ { $eq: ["$paymentStatus", "successful"] }, "$totalPrice", 0 ]
+            }
+          },
+          bookings: { $sum: 1 },
+          paidBookings: {
+            $sum: {
+              $cond: [ { $eq: ["$paymentStatus", "successful"] }, 1, 0 ]
+            }
+          }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const dailyStats = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const found = dailyStatsRaw.find(item => item._id === dateStr);
+      dailyStats.push({
+        date: dateStr,
+        dayLabel: d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric' }),
+        revenue: found ? found.revenue : 0,
+        bookings: found ? found.bookings : 0,
+        paidBookings: found ? found.paidBookings : 0,
+      });
+    }
+
+    // --- Top 5 Events by Revenue & Ticket Sales ---
+    const eventStatsRaw = await Booking.aggregate([
+      { $match: { paymentStatus: 'successful' } },
+      {
+        $group: {
+          _id: '$eventId',
+          revenue: { $sum: '$totalPrice' },
+          ticketsSold: { $sum: { $size: '$selectedSeats' } }
+        }
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 }
+    ]);
+
+    const eventStats = await Promise.all(
+      eventStatsRaw.map(async (item) => {
+        const event = await Event.findById(item._id).select('title');
+        return {
+          eventId: item._id,
+          title: event ? event.title : 'Sự kiện khác',
+          revenue: item.revenue,
+          ticketsSold: item.ticketsSold,
+        };
+      })
+    );
+
     return res.status(200).json({
       success: true,
       data: {
@@ -337,7 +473,10 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
         pendingBookings,
         confirmedBookings,
         cancelledBookings,
-        totalRevenue: revenueResult[0]?.total || 0,
+        totalRevenue,
+        trends,
+        dailyStats,
+        eventStats,
       },
     });
   } catch (error: any) {

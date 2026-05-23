@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthModal } from '../../contexts/AuthModalContext';
 import { forgotPassword } from '../../services/authService';

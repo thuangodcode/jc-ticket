@@ -5,7 +5,7 @@ import { ArrowLeft, Download, Calendar, MapPin, User, Phone, Ticket } from 'luci
 import { useTheme } from '../contexts/ThemeContext';
 import { ticketService } from '../services/ticketService';
 import { Navbar } from '../components/Navbar';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export default function TicketDetailPage() {
   const { ticketCode } = useParams<{ ticketCode: string }>();

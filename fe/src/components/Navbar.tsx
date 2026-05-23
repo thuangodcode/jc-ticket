@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, Moon, Sun, Globe, LogOut, User, Ticket, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuthModal } from '../contexts/AuthModalContext';
 import { useUserAuth } from '../contexts/useUserAuth';

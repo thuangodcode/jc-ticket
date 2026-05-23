@@ -9,6 +9,7 @@ export default {
     extend: {
       colors: {
         // Japanese Modern Color Palette
+        'white': '#ffffff', // added default white
         'akai': '#DC143C', // 赤 - Japanese Red
         'sakura': '#FFB7C5', // 桜 - Sakura Pink
         'sakura-dark': '#FF69B4', // Deep Sakura

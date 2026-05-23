@@ -1,68 +1,83 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ── Load legacy tailwind.config.js (extends default theme) ── */
+@config "../tailwind.config.js";
+
+/* ── Dark mode: class strategy ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Keyframes ── */
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes slideUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(220, 20, 60, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(220, 20, 60, 0.6); }
 }
 
+/* ── Base styles ── */
 html {
   scroll-behavior: smooth;
 }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  @apply bg-white text-ink;
 }
 
-/* Japanese Elegant Scrollbar */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  @apply bg-cream;
+  background-color: #FFF8F0;
 }
-
 ::-webkit-scrollbar-thumb {
-  @apply bg-akai rounded-full;
+  background-color: #DC143C;
+  border-radius: 9999px;
   transition: background 0.3s;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-sakura-dark;
+  background-color: #FF69B4;
 }
 
 /* Selection styling */
 ::selection {
-  @apply bg-akai text-white;
+  background-color: #DC143C;
+  color: #ffffff;
 }
 
-/* Smooth transitions */
+/* ── Component Layer ── */
 @layer components {
   .transition-smooth {
     @apply transition-all duration-300 ease-in-out;
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-akai text-white rounded-lg font-semibold hover:bg-sakura-dark transition-smooth transform hover:scale-105 active:scale-95;
+    @apply px-6 py-3 bg-akai text-white rounded-lg font-semibold hover:bg-sakura-dark transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-cream text-akai rounded-lg font-semibold border-2 border-akai hover:bg-akai hover:text-white transition-smooth;
+    @apply px-6 py-3 bg-cream text-akai rounded-lg font-semibold border-2 border-akai hover:bg-akai hover:text-white transition-all duration-300 ease-in-out;
   }
 
   .btn-ghost {
-    @apply px-6 py-3 text-akai font-semibold hover:bg-cream rounded-lg transition-smooth;
+    @apply px-6 py-3 text-akai font-semibold hover:bg-cream rounded-lg transition-all duration-300 ease-in-out;
   }
 
   .card-elegant {
-    @apply bg-white dark:bg-charcoal rounded-xl shadow-md hover:shadow-xl transition-smooth border border-cream dark:border-charcoal/30 overflow-hidden;
+    @apply bg-white dark:bg-charcoal rounded-xl shadow-md hover:shadow-xl transition-all duration-300 ease-in-out border border-cream overflow-hidden;
   }
 
   .section-title {
@@ -70,7 +85,6 @@ body {
   }
 
   .section-subtitle {
-    @apply text-lg text-charcoal/70 dark:text-zinc-400 mt-2;
+    @apply text-lg mt-2 text-charcoal/70 dark:text-zinc-400;
   }
 }
-

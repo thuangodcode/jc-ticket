@@ -7,7 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ticketService } from '../services/ticketService';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export default function MyTicketsPage() {
   const { isDark } = useTheme();

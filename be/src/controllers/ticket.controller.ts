@@ -152,11 +152,20 @@ export const markTicketUsed = async (req: AuthRequest, res: Response) => {
  */
 export const getAllTickets = async (req: AuthRequest, res: Response) => {
   try {
-    const { status, eventId, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const { status, eventId, page = '1', limit = '20', search } = req.query as Record<string, string>;
 
     const filter: any = {};
     if (status) filter.status = status;
     if (eventId) filter.eventId = eventId;
+    if (search) {
+      filter.$or = [
+        { ticketCode: { $regex: search, $options: 'i' } },
+        { passengerName: { $regex: search, $options: 'i' } },
+        { passengerPhone: { $regex: search, $options: 'i' } },
+        { passengerEmail: { $regex: search, $options: 'i' } },
+        { seatNumber: { $regex: search, $options: 'i' } },
+      ];
+    }
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, parseInt(limit));
