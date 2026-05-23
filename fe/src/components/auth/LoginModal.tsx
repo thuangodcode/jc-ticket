@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthModal } from '../../contexts/AuthModalContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
@@ -14,6 +15,7 @@ const LoginModal: React.FC = () => {
   const { isDark } = useTheme();
   const { switchModal, closeModal } = useAuthModal();
   const { login, isLoading: authLoading } = useUserAuth();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +35,7 @@ const LoginModal: React.FC = () => {
     try {
       console.log('🔐 LoginModal: Calling login()...');
       // Use UserAuthContext login method
-      await login(formData.email, formData.password);
+      const loggedInUser = await login(formData.email, formData.password);
       console.log('🔐 LoginModal: login() completed, closing modal...');
 
       // 🎉 Login successful - close modal
@@ -46,6 +48,11 @@ const LoginModal: React.FC = () => {
         duration: 3000,
         position: 'top-center',
       });
+
+      // Redirect admin to dashboard
+      if (loggedInUser && loggedInUser.role === 'admin') {
+        navigate('/admin');
+      }
     } catch (err: unknown) {
       console.error('🔐 LoginModal: Login failed:', err);
       // Error is already set in context, but we can also display it here

@@ -74,7 +74,7 @@ export default function AdminLayout() {
       <main className="flex-1 min-h-screen">
         <header className={`sticky top-0 z-30 flex items-center gap-4 px-6 py-4 ${isDark ? 'bg-ink/95 border-zinc-800' : 'bg-white/95 border-gray-200'} border-b backdrop-blur`}>
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden"><Menu size={20}/></button>
-          <h2 className="text-lg font-bold">⚡ Admin Dashboard</h2>
+          <h2 className="text-lg font-bold">👋 {user?.name || 'Admin'}</h2>
         </header>
         <div className="p-6"><Outlet/></div>
       </main>

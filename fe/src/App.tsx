@@ -26,6 +26,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
 const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
+const AdminEventFormPage = lazy(() => import('./pages/admin/AdminEventFormPage'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -53,7 +54,7 @@ function HomePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const handleSearch = (filters: SearchFilters) => { console.log('Search:', filters); };
-  const handleCategoryClick = (category: Category) => { console.log('Category:', category); };
+  const handleCategoryClick = (category: Category) => { navigate(`/events?category=${category.id}`); };
   const handleEventClick = (event: any) => { navigate(`/events/${event.id}`); };
   const handleFestivalClick = () => { console.log('Festival selected'); };
   const handleSubscribe = (email: string) => { console.log('Subscribe:', email); };
@@ -78,7 +79,7 @@ function HomePage() {
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-ink text-cream' : 'bg-white text-ink'}`}>
       <Navbar onSearchClick={() => window.scrollTo({ top: 600, behavior: 'smooth' })} />
       <HeroBanner onExploreClick={() => navigate('/events')} onTicketClick={() => window.scrollTo({ top: 3800, behavior: 'smooth' })} onSearch={handleSearch} />
-      <Categories onCategoryClick={handleCategoryClick} />
+      <Categories onCategoryClick={handleCategoryClick} onViewAllClick={() => navigate('/events')} />
       <UpcomingEvents onEventClick={handleEventClick} onViewAll={() => navigate('/events')} />
       <FeaturedFestivals onFestivalClick={handleFestivalClick} />
       <WhyUs />
@@ -120,6 +121,10 @@ function AppContent() {
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="events" element={<AdminEvents />} />
           </Route>
+
+          {/* Admin Events Creation/Editing Page */}
+          <Route path="/admin/events/create" element={<AdminEventFormPage />} />
+          <Route path="/admin/events/edit/:id" element={<AdminEventFormPage />} />
         </Routes>
         <AuthModal />
       </Suspense>

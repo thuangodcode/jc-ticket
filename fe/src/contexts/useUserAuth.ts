@@ -12,8 +12,8 @@ export interface UserAuthContextType {
   error: string | null;
 
   // Actions
-  login: (email: string, password: string) => Promise<void>;
-  autoLogin: (email: string, password: string) => Promise<void>; // For OTP flow
+  login: (email: string, password: string) => Promise<User>;
+  autoLogin: (email: string, password: string) => Promise<User>; // For OTP flow
   register: (name: string, phone: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetError: () => void;
@@ -30,8 +30,8 @@ const defaultContextValue: UserAuthContextType = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
-  login: async () => {},
-  autoLogin: async () => {},
+  login: async () => ({} as User),
+  autoLogin: async () => ({} as User),
   register: async () => {},
   logout: async () => {},
   resetError: () => {},
