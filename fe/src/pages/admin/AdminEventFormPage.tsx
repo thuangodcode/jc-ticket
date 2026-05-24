@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, Trash2, Upload, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { eventService } from '../../services/eventService';
 import { uploadService } from '../../services/uploadService';
+import LocationAutocomplete, { type LocationResult } from '../../components/LocationAutocomplete';
+import MapPreview from '../../components/MapPreview';
 
 
 const VIETNAM_PROVINCES = [
@@ -53,6 +55,8 @@ export default function AdminEventFormPage() {
     endTime: '21:00', // HH:MM
     location: '',
     venue: '',
+    formattedAddress: '', // Địa chỉ chi tiết đầy đủ (từ autocomplete)
+    coordinates: null as { lat: number; lng: number } | null, // Tọa độ bản đồ
     organizer: '',
     price: 0,
     vipPrice: 0,
@@ -66,6 +70,16 @@ export default function AdminEventFormPage() {
     ],
     seatMap: { rows: 10, seatsPerRow: 12, vipRows: '0,1' },
   });
+
+  /** Callback khi user chọn địa chỉ từ autocomplete */
+  const handleLocationSelect = useCallback((result: LocationResult) => {
+    setForm((prev: any) => ({
+      ...prev,
+      venue: result.formattedAddress,
+      formattedAddress: result.formattedAddress,
+      coordinates: { lat: result.lat, lng: result.lng },
+    }));
+  }, []);
 
   // Fetch event data if editing
   useEffect(() => {
@@ -108,6 +122,8 @@ export default function AdminEventFormPage() {
           endTime: endTimePart,
           location: event.location || '',
           venue: event.venue || '',
+          formattedAddress: event.formattedAddress || event.venue || '',
+          coordinates: event.coordinates || null,
           organizer: event.organizer || '',
           price: event.price || 0,
           vipPrice: event.vipPrice || 0,
@@ -245,6 +261,8 @@ export default function AdminEventFormPage() {
         endDate: new Date(endDateStr),
         location: form.location.trim(),
         venue: form.venue.trim() || form.location.trim(), // fallback to location if venue is empty
+        formattedAddress: form.formattedAddress?.trim() || form.venue?.trim() || form.location.trim(),
+        ...(form.coordinates ? { coordinates: form.coordinates } : {}),
         organizer: form.organizer.trim() || 'JC-Ticket Organizers',
         price: firstPrice,
         vipPrice: secondPrice,
@@ -424,16 +442,35 @@ export default function AdminEventFormPage() {
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${labelColor}`}>
                   Địa điểm cụ thể (Venue)
+                  <span className={`ml-2 text-xs font-normal ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+                    — gõ để tìm &amp; chọn địa chỉ
+                  </span>
                 </label>
-                <input
-                  type="text"
+                <LocationAutocomplete
                   value={form.venue}
-                  onChange={(e) => setForm({ ...form, venue: e.target.value })}
-                  placeholder="Ví dụ: SECC Quận 7"
-                  className={`w-full px-4 py-2.5 rounded-xl border outline-none transition-all ${inputBg}`}
+                  onChange={(val) => setForm((prev: any) => ({ ...prev, venue: val }))}
+                  onSelect={handleLocationSelect}
+                  placeholder="Ví dụ: SECC Quận 7, Hội trường..."
+                  inputClassName={`py-2.5 rounded-xl border outline-none transition-all ${inputBg}`}
                 />
               </div>
             </div>
+
+            {/* Bản đồ preview khi đã chọn địa chỉ */}
+            {form.coordinates?.lat && form.coordinates?.lng && (
+              <div className="space-y-1.5">
+                <p className={`text-xs font-semibold ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                  📍 Xem trước vị trí trên bản đồ
+                </p>
+                <MapPreview
+                  lat={form.coordinates.lat}
+                  lng={form.coordinates.lng}
+                  address={form.formattedAddress || form.venue}
+                  height={200}
+                  zoom={15}
+                />
+              </div>
+            )}
 
             {/* Sức chứa & Giá cơ bản */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
