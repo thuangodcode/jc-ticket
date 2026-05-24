@@ -17,16 +17,25 @@ const navItems = [
 
 export default function AdminLayout() {
   const { isDark, toggleDark } = useTheme();
-  const { user, logout } = useUserAuth();
+  const { user, logout, isLoading } = useUserAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0c0f1a] text-white' : 'bg-gray-50'}`}>
+        <div className="w-12 h-12 border-4 border-akai border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (user?.role !== 'admin') {
     return (
@@ -131,34 +140,7 @@ export default function AdminLayout() {
           </button>
         </div>
 
-        {/* User section */}
-        <div className={`border-t ${isDark ? 'border-white/[0.06]' : 'border-gray-100'} ${collapsed ? 'px-2 py-3' : 'px-4 py-4'}`}>
-          {!collapsed && (
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-akai to-sakura-dark flex items-center justify-center text-white font-bold text-sm shadow-md shadow-akai/20">
-                {user?.name?.charAt(0)?.toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{user?.name}</p>
-                <p className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Administrator</p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => { logout(); navigate('/'); }}
-            className={`
-              ${collapsed ? 'w-full flex justify-center' : 'w-full flex items-center gap-2'}
-              px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200
-              ${isDark
-                ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
-                : 'text-red-500 hover:bg-red-50 hover:text-red-600'
-              }
-            `}
-          >
-            <LogOut size={16} />
-            {!collapsed && <span>Đăng xuất</span>}
-          </button>
-        </div>
+
       </aside>
 
       {/* ── Mobile overlay ── */}
@@ -193,7 +175,9 @@ export default function AdminLayout() {
           </button>
 
           <div className="flex-1">
-            <h2 className="text-lg font-bold tracking-tight">{getPageTitle()}</h2>
+            <h2 className="text-lg font-bold tracking-tight">
+              {getPageTitle() === 'Dashboard' ? `👋 ${user?.name || 'Admin'}` : getPageTitle()}
+            </h2>
           </div>
 
           <div className="flex items-center gap-2">
@@ -211,6 +195,72 @@ export default function AdminLayout() {
               <Bell size={18} />
               <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-akai rounded-full ring-2 ring-white dark:ring-[#0c0f1a]" />
             </button>
+
+            {/* User Profile & Logout Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                className={`flex items-center gap-2 p-1.5 rounded-xl transition-all duration-200 ${
+                  isDark ? 'hover:bg-white/[0.06]' : 'hover:bg-gray-100'
+                }`}
+                aria-expanded={profileDropdownOpen}
+                aria-haspopup="true"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-akai to-sakura-dark flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-akai/20">
+                  {user?.name?.charAt(0)?.toUpperCase()}
+                </div>
+                <span className="hidden md:block text-xs font-semibold">{user?.name}</span>
+              </button>
+
+              <AnimatePresence>
+                {profileDropdownOpen && (
+                  <>
+                    {/* Click-outside backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className={`absolute right-0 mt-2 w-56 rounded-xl border shadow-xl z-50 p-2 ${
+                        isDark
+                          ? 'bg-[#111528] border-white/[0.06] shadow-black/40'
+                          : 'bg-white border-gray-200 shadow-gray-200/50'
+                      }`}
+                    >
+                      {/* User Info Header */}
+                      <div className="px-3 py-2.5 border-b mb-1 border-gray-100 dark:border-white/[0.06]">
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Tài khoản</p>
+                        <p className="text-sm font-semibold truncate mt-0.5">{user?.name}</p>
+                        <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-akai/10 text-akai">
+                          Administrator
+                        </span>
+                      </div>
+
+                      {/* Logout Action */}
+                      <button
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          logout();
+                          navigate('/');
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          isDark
+                            ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
+                            : 'text-red-500 hover:bg-red-50 hover:text-red-600'
+                        }`}
+                      >
+                        <LogOut size={16} />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
