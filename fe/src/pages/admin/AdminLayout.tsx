@@ -78,13 +78,13 @@ export default function AdminLayout() {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === '/admin') return 'Dashboard';
-    if (path.includes('/scan')) return 'Quét vé Check-in';
+    if (path.includes('/scan') || path.includes('/check-in')) return 'Quét vé Check-in';
     if (path.includes('/orders')) return 'Quản lý đơn hàng';
     if (path.includes('/tickets')) return 'Vé đã phát hành';
     if (path.includes('/events/create')) return 'Tạo sự kiện mới';
     if (path.includes('/events/edit')) return 'Chỉnh sửa sự kiện';
     if (path.includes('/events')) return 'Quản lý sự kiện';
-    return 'Admin';
+    return isStaff ? 'Staff' : 'Admin';
   };
 
   return (
@@ -110,7 +110,9 @@ export default function AdminLayout() {
           {!collapsed && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden">
               <p className="font-bold text-sm tracking-tight">JC-Ticket</p>
-              <p className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Admin Panel</p>
+              <p className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {isStaff ? 'Staff Panel' : 'Admin Panel'}
+              </p>
             </motion.div>
           )}
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-1.5 rounded-lg hover:bg-white/10">

@@ -175,11 +175,13 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
     const limitNum = Math.min(100, parseInt(limit));
     const skip = (pageNum - 1) * limitNum;
 
+    const sortOption = status === 'used' ? { updatedAt: -1 } : { issuedAt: -1 };
+
     const [tickets, total] = await Promise.all([
       Ticket.find(filter)
         .populate('eventId', 'title date')
         .populate('bookingId', 'bookingCode')
-        .sort({ issuedAt: -1 })
+        .sort(sortOption as any)
         .skip(skip)
         .limit(limitNum),
       Ticket.countDocuments(filter),

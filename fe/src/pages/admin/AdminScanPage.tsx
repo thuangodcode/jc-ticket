@@ -21,6 +21,7 @@ interface HistoryItem {
   timestamp: Date;
   status: 'success' | 'failed';
   message: string;
+  ticketType?: string;
 }
 
 export default function AdminScanPage() {
@@ -50,11 +51,32 @@ export default function AdminScanPage() {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const elementId = "qr-camera-stream";
 
+  const fetchCheckInHistory = async () => {
+    try {
+      const res = await ticketService.getAllTickets({ status: 'used', page: 1, limit: 5 } as any);
+      if (res && res.data) {
+        const historyItems: HistoryItem[] = res.data.map((ticket: any) => ({
+          ticketCode: ticket.ticketCode,
+          passengerName: ticket.passengerName || 'Khách mời',
+          timestamp: new Date(ticket.updatedAt || ticket.usedAt || Date.now()),
+          status: 'success',
+          message: 'Thành công',
+          ticketType: ticket.ticketType
+        }));
+        setHistory(historyItems);
+      }
+    } catch (err) {
+      console.error('Failed to fetch check-in history:', err);
+    }
+  };
+
   useEffect(() => {
     // Check permission
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(() => setHasCameraPermission(true))
       .catch(() => setHasCameraPermission(false));
+
+    fetchCheckInHistory();
 
     return () => {
       // Clean up scanner on unmount
@@ -174,7 +196,8 @@ export default function AdminScanPage() {
           passengerName: guestName,
           timestamp: new Date(),
           status: 'success',
-          message: 'Thành công'
+          message: 'Thành công',
+          ticketType: verifyRes.data?.ticketType
         },
         ...prev.slice(0, 5)
       ]);
@@ -224,41 +247,47 @@ export default function AdminScanPage() {
   };
 
   const card = isDark
-    ? 'bg-[#151929]/80 border border-white/[0.06] backdrop-blur'
-    : 'bg-white border border-gray-200/60 shadow-sm';
+    ? 'bg-[#151929]/90 border border-white/[0.06] backdrop-blur-xl shadow-2xl shadow-black/25'
+    : 'bg-white border border-gray-200/60 shadow-xl shadow-gray-100/50';
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-10">
+    <div className="max-w-2xl mx-auto space-y-6 pb-12 px-2 md:px-0">
       
       {/* ── Header Card ── */}
-      <div className={`${card} p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4`}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-akai to-sakura-dark rounded-xl flex items-center justify-center text-white shadow-md shadow-akai/25">
-            <QrCode size={20} />
+      <div className={`${card} p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 hover:border-akai/20`}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-tr from-akai via-akai to-sakura-dark rounded-2xl flex items-center justify-center text-white shadow-lg shadow-akai/30 animate-[pulse_3s_infinite]">
+            <QrCode size={24} />
           </div>
           <div>
-            <h1 className="text-lg font-bold">Staff Check-in</h1>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Quét QR hoặc nhập mã vé sự kiện để duyệt check-in tự động
+            <h1 className="text-xl font-bold bg-gradient-to-r from-akai to-sakura-dark bg-clip-text text-transparent">Staff Check-in</h1>
+            <p className={`text-[11px] mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Duyệt kiểm soát ra vào bằng camera hoặc nhập mã vé thủ công
             </p>
           </div>
         </div>
         
-        <div className={`py-1.5 px-3 rounded-xl border text-xs font-semibold ${isDark ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-gray-50 border-gray-100'}`}>
-          👤 Nhân viên: <span className="text-akai font-bold">{user?.name}</span>
+        <div className={`self-start sm:self-center py-2 px-4 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+          isDark 
+            ? 'bg-white/[0.03] border-white/[0.08] text-gray-200' 
+            : 'bg-gray-50 border-gray-100 text-gray-700'
+        }`}>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          Nhân viên: <span className="text-akai font-extrabold">{user?.name}</span>
         </div>
       </div>
 
       {/* ── Camera Scanner Area ── */}
       {hasCameraPermission === false && (
-        <div className="w-full p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-xs text-center">
+        <div className="w-full p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-xs text-center font-medium animate-pulse">
           ❌ Vui lòng cấp quyền truy cập camera trong cài đặt trình duyệt để có thể quét QR trực tiếp.
         </div>
       )}
-      <div className={`${card} p-6 rounded-3xl overflow-hidden flex flex-col items-center justify-center relative min-h-[380px]`}>
+      
+      <div className={`${card} p-6 rounded-3xl overflow-hidden flex flex-col items-center justify-center relative min-h-[420px]`}>
         
         {/* Scanner Viewfinder Box */}
-        <div className="w-full max-w-sm aspect-square relative rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/10 shadow-inner">
+        <div className="w-full max-w-sm aspect-square relative rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center border border-white/10 shadow-inner group">
           
           <div 
             id={elementId} 
@@ -266,13 +295,13 @@ export default function AdminScanPage() {
           />
 
           {!scanning && (
-            <div className="z-10 flex flex-col items-center justify-center text-center p-6 space-y-3">
-              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-gray-400">
-                <Camera size={32} />
+            <div className="z-10 flex flex-col items-center justify-center text-center p-6 space-y-4">
+              <div className="w-20 h-20 bg-white/[0.04] border border-white/10 rounded-3xl flex items-center justify-center text-gray-400 group-hover:scale-105 group-hover:border-akai/40 transition-all duration-300">
+                <Camera size={36} className="text-gray-300" />
               </div>
               <div>
-                <p className="text-white text-sm font-bold">Camera đang tắt</p>
-                <p className="text-gray-500 text-xs mt-1">Bấm nút bên dưới để bắt đầu quét vé</p>
+                <p className="text-white text-base font-bold">Camera đang tắt</p>
+                <p className="text-gray-500 text-xs mt-1 max-w-[200px] mx-auto">Chạm vào nút bên dưới để mở camera quét vé</p>
               </div>
             </div>
           )}
@@ -281,26 +310,26 @@ export default function AdminScanPage() {
           {scanning && (
             <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
               {/* Viewfinder Target square */}
-              <div className="w-3/4 h-3/4 border-2 border-emerald-500/20 rounded-2xl relative">
+              <div className="w-2/3 h-2/3 border-2 border-emerald-500/20 rounded-2xl relative shadow-[0_0_20px_rgba(16,185,129,0.1)]">
                 {/* Neon Corners */}
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-500 rounded-tl-lg" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-500 rounded-tr-lg" />
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-500 rounded-bl-lg" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-500 rounded-br-lg" />
+                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
+                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
                 
                 {/* Horizontal scanner beam line */}
-                <div className="absolute left-2 right-2 h-0.5 bg-emerald-500 shadow-md shadow-emerald-500/50 top-1/2 animate-[pulse_2s_infinite] -translate-y-1/2" />
+                <div className="absolute left-1.5 right-1.5 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_#34d399] top-1/2 animate-[bounce_3s_infinite] -translate-y-1/2" />
               </div>
             </div>
           )}
         </div>
 
         {/* Scanner Control buttons */}
-        <div className="mt-5 w-full max-w-sm flex flex-col items-center gap-3">
+        <div className="mt-6 w-full max-w-sm flex flex-col items-center gap-3">
           {scanning ? (
             <button
               onClick={stopScanning}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/25"
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 active:scale-[0.99] transition-all shadow-lg shadow-red-500/20"
             >
               <CameraOff size={16} />
               Tắt Camera
@@ -308,7 +337,7 @@ export default function AdminScanPage() {
           ) : (
             <button
               onClick={startScanning}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-akai/20 transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-akai/20 active:scale-[0.99] transition-all"
             >
               <Camera size={16} />
               Mở Camera bắt đầu quét QR
@@ -321,8 +350,8 @@ export default function AdminScanPage() {
       </div>
 
       {/* ── Manual Input Area ── */}
-      <div className={`${card} p-5 rounded-2xl`}>
-        <div className="flex items-center gap-2 mb-3">
+      <div className={`${card} p-6 rounded-2xl transition-all duration-300 hover:border-akai/20`}>
+        <div className="flex items-center gap-2 mb-4">
           <Keyboard size={16} className="text-akai" />
           <h2 className="text-xs font-bold uppercase tracking-wider">Hoặc nhập mã vé thủ công</h2>
         </div>
@@ -334,17 +363,17 @@ export default function AdminScanPage() {
             onChange={(e) => setManualCode(e.target.value)}
             disabled={checking}
             className={`
-              flex-1 px-4 py-3 rounded-xl text-xs outline-none transition-all duration-200 font-mono font-bold
+              flex-1 px-4 py-3.5 rounded-xl text-xs outline-none transition-all duration-200 font-mono font-bold tracking-wider
               ${isDark
-                ? 'bg-white/[0.03] text-gray-200 border border-white/[0.06] focus:border-akai focus:ring-1 focus:ring-akai'
-                : 'bg-gray-50 text-gray-800 border border-gray-200 focus:border-akai focus:ring-1 focus:ring-akai'
+                ? 'bg-white/[0.02] text-gray-200 border border-white/[0.06] focus:border-akai focus:ring-1 focus:ring-akai/50 focus:bg-white/[0.04]'
+                : 'bg-gray-50 text-gray-800 border border-gray-200 focus:border-akai focus:ring-1 focus:ring-akai/50 focus:bg-white'
               }
             `}
           />
           <button
             type="submit"
             disabled={checking || !manualCode.trim()}
-            className="px-6 py-3 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-xs hover:shadow-md hover:shadow-akai/20 disabled:opacity-40 transition-all shrink-0"
+            className="px-6 py-3.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-xs hover:shadow-md hover:shadow-akai/20 disabled:opacity-40 transition-all shrink-0 active:scale-[0.98]"
           >
             Check-in
           </button>
@@ -352,34 +381,56 @@ export default function AdminScanPage() {
       </div>
 
       {/* ── Recent History Area ── */}
-      <div className={`${card} p-5 rounded-2xl space-y-3`}>
-        <div className="flex items-center justify-between border-b pb-2.5 border-gray-100 dark:border-white/[0.04]">
+      <div className={`${card} p-6 rounded-2xl space-y-4 transition-all duration-300 hover:border-akai/20`}>
+        <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-white/[0.04]">
           <div className="flex items-center gap-2">
             <History size={16} className="text-gray-400" />
             <h2 className="text-xs font-bold uppercase tracking-wider">Lịch sử check-in vừa qua</h2>
           </div>
-          <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Tối đa 5 lượt gần nhất</span>
+          <span className={`text-[10px] py-0.5 px-2 rounded-full ${isDark ? 'bg-white/[0.03] text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+            Đồng bộ thời gian thực 🔄
+          </span>
         </div>
 
         {history.length === 0 ? (
-          <p className={`text-center py-4 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            Chưa có lượt check-in nào được ghi nhận trong phiên này.
-          </p>
+          <div className="text-center py-8 space-y-2">
+            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              Chưa có lượt check-in nào được ghi nhận.
+            </p>
+          </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-white/[0.04] text-[13px]">
+          <div className="divide-y divide-gray-100 dark:divide-white/[0.04] text-[13px] -mx-2">
             {history.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between py-2">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-bold text-akai text-[12px]">{item.ticketCode}</span>
-                    <span className="text-[11px] opacity-60">— {item.passengerName}</span>
+              <div key={idx} className="flex items-center justify-between py-3 px-2 rounded-xl transition-all duration-200 hover:bg-white/[0.02]">
+                <div className="flex items-center gap-3">
+                  {/* Status Indicator Dot */}
+                  <div className="relative flex items-center justify-center">
+                    <span className={`absolute inline-flex h-2.5 w-2.5 rounded-full ${item.status === 'success' ? 'bg-emerald-500' : 'bg-red-500'} opacity-75 ${item.status === 'success' ? 'animate-ping' : ''}`} />
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${item.status === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   </div>
-                  <p className="text-[10px] opacity-40">
-                    {item.timestamp.toLocaleTimeString('vi-VN')}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-extrabold text-akai text-[13px]">{item.ticketCode}</span>
+                      <span className={`text-[10px] opacity-75 font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {item.passengerName}
+                      </span>
+                      {item.ticketType && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                          item.ticketType === 'vip' 
+                            ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' 
+                            : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                        }`}>
+                          {item.ticketType.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[10px] mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Check-in lúc: {item.timestamp.toLocaleTimeString('vi-VN')}
+                    </p>
+                  </div>
                 </div>
-                <span className={`text-xs font-bold ${item.status === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {item.status === 'success' ? 'Thành công ✅' : 'Thất bại ❌'}
+                <span className={`text-xs font-extrabold ${item.status === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {item.status === 'success' ? 'Thành công' : 'Thất bại'}
                 </span>
               </div>
             ))}
@@ -389,26 +440,26 @@ export default function AdminScanPage() {
 
       {/* ── Result Detail Dialog Overlay ── */}
       {showResult && scanResult && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div 
-            className={`${card} rounded-3xl p-6 max-w-sm w-full shadow-2xl overflow-hidden relative border border-white/10`}
+            className={`${card} rounded-3xl p-6 max-w-sm w-full shadow-2xl overflow-hidden relative border border-white/10 animate-[scaleIn_0.2s_ease-out]`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Badge */}
             {scanResult.success ? (
               <div className="flex flex-col items-center text-center pb-5 border-b border-gray-100 dark:border-white/[0.04]">
-                <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-3 animate-bounce">
-                  <CheckCircle size={32} />
+                <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-3 animate-[bounce_1.5s_infinite]">
+                  <CheckCircle size={36} />
                 </div>
-                <h3 className="text-lg font-bold text-emerald-500">CHECK-IN THÀNH CÔNG</h3>
+                <h3 className="text-lg font-bold text-emerald-500 tracking-wider">CHECK-IN THÀNH CÔNG</h3>
                 <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{scanResult.message}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center text-center pb-5 border-b border-gray-100 dark:border-white/[0.04]">
-                <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-3">
-                  <XCircle size={32} />
+                <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-3 animate-shake">
+                  <XCircle size={36} />
                 </div>
-                <h3 className="text-lg font-bold text-red-500">CHECK-IN THẤT BẠI</h3>
+                <h3 className="text-lg font-bold text-red-500 tracking-wider">CHECK-IN THẤT BẠI</h3>
                 <p className="text-xs text-red-400 mt-1 font-semibold">{scanResult.message}</p>
               </div>
             )}
@@ -416,15 +467,15 @@ export default function AdminScanPage() {
             {/* Guest Details */}
             {scanResult.success && (
               <div className="py-5 space-y-3">
-                <div className="flex justify-between border-b pb-1.5 border-gray-50 dark:border-white/[0.02]">
+                <div className="flex justify-between border-b pb-2 border-gray-50 dark:border-white/[0.02]">
                   <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Hành khách</span>
                   <span className="text-xs font-bold">{scanResult.passengerName}</span>
                 </div>
-                <div className="flex justify-between border-b pb-1.5 border-gray-50 dark:border-white/[0.02]">
+                <div className="flex justify-between border-b pb-2 border-gray-50 dark:border-white/[0.02]">
                   <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Số ghế</span>
                   <span className="text-xs font-bold text-akai">{scanResult.seatNumber}</span>
                 </div>
-                <div className="flex justify-between border-b pb-1.5 border-gray-50 dark:border-white/[0.02]">
+                <div className="flex justify-between border-b pb-2 border-gray-50 dark:border-white/[0.02]">
                   <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Hạng vé</span>
                   <span className="text-xs font-bold">{scanResult.ticketType}</span>
                 </div>
@@ -436,11 +487,11 @@ export default function AdminScanPage() {
             )}
 
             {!scanResult.success && (
-              <div className="py-6 text-center space-y-2">
+              <div className="py-6 text-center space-y-3">
                 <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mã vé đã quét</p>
-                <p className="font-mono text-base font-bold text-akai">{scanResult.ticketCode}</p>
-                <div className="p-3 bg-red-500/5 rounded-xl border border-red-500/10 text-red-500 text-[11px]">
-                  Vui lòng kiểm tra lại trạng thái vé trên hệ thống hoặc thử quét lại.
+                <p className="font-mono text-lg font-extrabold text-akai tracking-wider bg-akai/5 py-2 rounded-xl border border-akai/10">{scanResult.ticketCode}</p>
+                <div className="p-3 bg-red-500/5 rounded-xl border border-red-500/10 text-red-400 text-[11px] font-medium leading-relaxed">
+                  Mã vé này không hợp lệ hoặc đã qua check-in trước đó. Vui lòng kiểm tra lại.
                 </div>
               </div>
             )}
@@ -448,7 +499,7 @@ export default function AdminScanPage() {
             {/* Action button to continue */}
             <button
               onClick={nextScan}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-akai/20 transition-all mt-2"
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-akai/20 active:scale-[0.98] transition-all mt-2"
             >
               <ListRestart size={16} />
               Quét Khách Tiếp Theo
