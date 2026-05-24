@@ -43,7 +43,11 @@ export const getTicketByCode = async (req: AuthRequest, res: Response) => {
     }
 
     // Chỉ owner hoặc admin mới xem được
-    if (ticket.userId.toString() !== req.user?.id && req.user?.role !== 'admin') {
+    const ticketOwnerId = (ticket.userId as any)._id
+      ? (ticket.userId as any)._id.toString()
+      : ticket.userId.toString();
+
+    if (ticketOwnerId !== req.user?.id && req.user?.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 

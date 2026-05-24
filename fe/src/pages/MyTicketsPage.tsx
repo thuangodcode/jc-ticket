@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download, Eye, Ticket, Calendar, MapPin } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useTheme } from '../contexts/ThemeContext';
 import { ticketService } from '../services/ticketService';
 import { Navbar } from '../components/Navbar';
@@ -44,8 +46,6 @@ export default function MyTicketsPage() {
 
   const handleDownloadPDF = async (ticket: any) => {
     try {
-      const { default: jsPDF } = await import('jspdf');
-      const { default: html2canvas } = await import('html2canvas');
       const el = document.getElementById(`ticket-${ticket.ticketCode}`);
       if (!el) return;
       const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#fff' });
@@ -57,6 +57,7 @@ export default function MyTicketsPage() {
       pdf.save(`JC-Ticket_${ticket.ticketCode}.pdf`);
       toast.success('PDF đã tải xuống!');
     } catch (err) {
+      console.error(err);
       toast.error('Không thể tạo PDF');
     }
   };

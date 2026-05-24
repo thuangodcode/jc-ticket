@@ -29,6 +29,54 @@ export default function AdminEventFormPage() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
 
+  const DEFAULT_SEATS_PER_ROW = 12;
+
+  const getCommonDivisors = (value: number) => {
+    const divisors = new Set<number>();
+    const limit = Math.floor(Math.sqrt(value));
+
+    for (let i = 1; i <= limit; i += 1) {
+      if (value % i === 0) {
+        divisors.add(i);
+        divisors.add(value / i);
+      }
+    }
+
+    return Array.from(divisors).sort((a, b) => a - b);
+  };
+
+  const buildNormalizedSeatMap = (
+    ticketTypes: any[],
+    seatMap: { rows?: number; seatsPerRow?: number; vipRows?: string | number[] }
+  ) => {
+    const totalSeats = ticketTypes.reduce((sum, type) => sum + (Number(type.quantity) || 0), 0);
+    const vipSeats = ticketTypes
+      .filter((type) => String(type.name || '').trim().toLowerCase() === 'vip')
+      .reduce((sum, type) => sum + (Number(type.quantity) || 0), 0);
+
+    const currentSeatsPerRow = Number(seatMap.seatsPerRow) || DEFAULT_SEATS_PER_ROW;
+    const candidates = getCommonDivisors(Math.max(1, totalSeats)).filter((divisor) => vipSeats === 0 || vipSeats % divisor === 0);
+    const seatsPerRow = candidates.length > 0
+      ? candidates.reduce((best, candidate) => {
+          const target = currentSeatsPerRow || DEFAULT_SEATS_PER_ROW;
+          const bestDistance = Math.abs(best - target);
+          const candidateDistance = Math.abs(candidate - target);
+          if (candidateDistance < bestDistance) return candidate;
+          if (candidateDistance === bestDistance && candidate > best) return candidate;
+          return best;
+        }, candidates[0])
+      : currentSeatsPerRow;
+
+    const rows = Math.max(1, Math.ceil(totalSeats / seatsPerRow));
+    const vipRowCount = vipSeats > 0 ? Math.min(rows, Math.ceil(vipSeats / seatsPerRow)) : 0;
+
+    return {
+      rows,
+      seatsPerRow,
+      vipRows: Array.from({ length: vipRowCount }, (_, index) => index),
+    };
+  };
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -156,12 +204,14 @@ export default function AdminEventFormPage() {
     const totalQty = form.ticketTypes.reduce((sum: number, type: any) => sum + (Number(type.quantity) || 0), 0);
     const basePrice = form.ticketTypes[0]?.price || 0;
     const vipPrice = form.ticketTypes.find((t: any) => t.name.toLowerCase() === 'vip')?.price || form.ticketTypes[1]?.price || 0;
+    const normalizedSeatMap = buildNormalizedSeatMap(form.ticketTypes, form.seatMap);
 
     setForm((prev: any) => ({
       ...prev,
       totalSeats: totalQty,
       price: basePrice,
       vipPrice: vipPrice,
+      seatMap: normalizedSeatMap,
     }));
   }, [form.ticketTypes]);
 
@@ -241,17 +291,12 @@ export default function AdminEventFormPage() {
         .map((t: string) => t.trim())
         .filter(Boolean);
 
-      // Handle VIP rows in seat map
-      const vipRowsArray = (form.seatMap.vipRows || '')
-        .split(',')
-        .map((s: string) => Number(s.trim()))
-        .filter((n: number) => !Number.isNaN(n));
-
       // Calculate total seats & price mapping
       const totalQty = form.ticketTypes.reduce((sum: number, type: any) => sum + (Number(type.quantity) || 0), 0);
       const firstPrice = Number(form.ticketTypes[0]?.price) || 0;
       const vipType = form.ticketTypes.find((t: any) => t.name.toLowerCase() === 'vip') || form.ticketTypes[1];
       const secondPrice = vipType ? Number(vipType.price) : 0;
+      const normalizedSeatMap = buildNormalizedSeatMap(form.ticketTypes, form.seatMap);
 
       const payload = {
         title: form.title.trim(),
@@ -277,11 +322,7 @@ export default function AdminEventFormPage() {
           price: Number(t.price),
           quantity: Number(t.quantity),
         })),
-        seatMap: {
-          rows: Number(form.seatMap.rows) || 10,
-          seatsPerRow: Number(form.seatMap.seatsPerRow) || 12,
-          vipRows: vipRowsArray,
-        },
+        seatMap: normalizedSeatMap,
       };
 
       setLoading(true);

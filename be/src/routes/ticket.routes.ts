@@ -6,7 +6,7 @@ import {
   markTicketUsed,
   getAllTickets,
 } from '../controllers/ticket.controller';
-import { protect, adminOnly } from '../middleware/auth';
+import { protect, adminOnly, staffOrAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -23,6 +23,6 @@ router.get('/code/:ticketCode', protect, getTicketByCode);
 
 // Admin routes
 router.get('/', protect, adminOnly, getAllTickets);
-router.patch('/:ticketCode/use', protect, adminOnly, markTicketUsed);
+router.patch('/:ticketCode/use', protect, staffOrAdmin, markTicketUsed);
 
 export default router;

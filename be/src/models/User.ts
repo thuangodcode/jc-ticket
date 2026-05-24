@@ -10,7 +10,7 @@ export interface IUser extends Document {
   phone?: string;
   password: string;
   avatar?: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'staff';
   isVerified: boolean;
 verificationOTP?: string | undefined;
 verificationOTPExpires?: Date | undefined;
@@ -59,7 +59,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'admin', 'staff'],
       default: 'user',
     },
     isVerified: {

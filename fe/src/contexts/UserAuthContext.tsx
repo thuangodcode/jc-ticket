@@ -11,7 +11,7 @@ export interface User {
   phone?: string;
   email: string;
   avatar?: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'staff';
   isVerified: boolean;
   createdAt: string;
 }

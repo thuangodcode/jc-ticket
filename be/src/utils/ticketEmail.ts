@@ -18,11 +18,36 @@ const FROM_ADDRESS =
   process.env.EMAIL_FROM ||
   `JC-Ticket <${process.env.GMAIL_EMAIL || 'noreply@jcticket.app'}>`;
 
-const sendEmailInternal = async (to: string, subject: string, html: string): Promise<void> => {
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  cid: string;
+  contentType: string;
+}
+
+const sendEmailInternal = async (
+  to: string,
+  subject: string,
+  html: string,
+  attachments?: EmailAttachment[]
+): Promise<void> => {
   // Primary: Resend HTTP API (không bị block trên Render free tier)
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const response = await resend.emails.send({ to, from: FROM_ADDRESS, subject, html });
+    const emailOptions: any = {
+      to,
+      from: FROM_ADDRESS,
+      subject,
+      html,
+    };
+    if (attachments && attachments.length > 0) {
+      emailOptions.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentId: att.cid,
+      }));
+    }
+    const response = await resend.emails.send(emailOptions);
     if (response.error) {
       throw new Error(`Resend error: ${response.error.message}`);
     }
@@ -33,7 +58,22 @@ const sendEmailInternal = async (to: string, subject: string, html: string): Pro
   // Secondary: SendGrid HTTP API (không bị block trên Render free tier)
   if (process.env.SENDGRID_API_KEY) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    await sgMail.send({ to, from: FROM_ADDRESS, subject, html });
+    const msg: any = {
+      to,
+      from: FROM_ADDRESS,
+      subject,
+      html,
+    };
+    if (attachments && attachments.length > 0) {
+      msg.attachments = attachments.map(att => ({
+        content: att.content.toString('base64'),
+        filename: att.filename,
+        type: att.contentType,
+        disposition: 'inline',
+        content_id: att.cid,
+      }));
+    }
+    await sgMail.send(msg);
     console.log(`✅ [SendGrid] Ticket email sent to ${to}`);
     return;
   }
@@ -54,23 +94,38 @@ const sendEmailInternal = async (to: string, subject: string, html: string): Pro
     greetingTimeout: 15000,
     socketTimeout: 25000,
   });
-  await transporter.sendMail({ from: FROM_ADDRESS, to, subject, html });
+
+  const mailOptions: any = {
+    from: FROM_ADDRESS,
+    to,
+    subject,
+    html,
+  };
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments.map(att => ({
+      filename: att.filename,
+      content: att.content,
+      cid: att.cid,
+    }));
+  }
+
+  await transporter.sendMail(mailOptions);
 };
 
 
 /**
- * Generate QR code as base64 data URL
+ * Generate QR code as Buffer
  */
-const generateQRBase64 = async (data: string): Promise<string> => {
+const generateQRBuffer = async (data: string): Promise<Buffer | null> => {
   try {
-    return await QRCode.toDataURL(data, {
+    return await QRCode.toBuffer(data, {
       width: 200,
       margin: 2,
       color: { dark: '#1A1A1A', light: '#FFFFFF' },
     });
   } catch (err) {
     console.error('QR generation error:', err);
-    return '';
+    return null;
   }
 };
 
@@ -104,16 +159,28 @@ export const sendTicketEmail = async (
 ): Promise<void> => {
   try {
     const event = booking.eventId;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://jc-ticket.vercel.app';
 
     // Generate QR codes cho tất cả tickets
     const ticketRows: string[] = [];
+    const attachments: EmailAttachment[] = [];
     for (const ticket of tickets) {
-      const qrBase64 = await generateQRBase64(ticket.qrCodeData);
+      const qrBuffer = await generateQRBuffer(ticket.qrCodeData);
+      const cid = `qr-${ticket.ticketCode}`;
+
+      if (qrBuffer) {
+        attachments.push({
+          filename: `qr-${ticket.ticketCode}.png`,
+          content: qrBuffer,
+          cid,
+          contentType: 'image/png',
+        });
+      }
+
       ticketRows.push(`
         <tr style="border-bottom: 1px solid #eee;">
           <td style="padding: 12px; text-align: center;">
-            <img src="${qrBase64}" alt="QR ${ticket.ticketCode}" width="120" height="120" />
+            <img src="cid:${cid}" alt="QR ${ticket.ticketCode}" width="120" height="120" />
           </td>
           <td style="padding: 12px;">
             <p style="margin: 0 0 4px; font-weight: bold; color: #DC143C; font-size: 14px;">${ticket.ticketCode}</p>
@@ -217,7 +284,8 @@ export const sendTicketEmail = async (
     await sendEmailInternal(
       booking.passengerInfo.email,
       `🎫 JC-Ticket - Vé của bạn cho "${event.title}" đã sẵn sàng!`,
-      mailOptions.html
+      mailOptions.html,
+      attachments
     );
     console.log(`📧 Ticket email sent to ${booking.passengerInfo.email}`);
   } catch (error) {

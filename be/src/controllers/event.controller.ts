@@ -2,6 +2,64 @@ import { Response } from 'express';
 import { Event } from '../models/Event';
 import { AuthRequest } from '../middleware/auth';
 
+const DEFAULT_SEATS_PER_ROW = 12;
+
+const getCommonDivisors = (value: number) => {
+  const divisors = new Set<number>();
+  const limit = Math.floor(Math.sqrt(value));
+
+  for (let i = 1; i <= limit; i += 1) {
+    if (value % i === 0) {
+      divisors.add(i);
+      divisors.add(value / i);
+    }
+  }
+
+  return Array.from(divisors).sort((a, b) => a - b);
+};
+
+const normalizeSeatMapFromTicketTypes = (ticketTypes: any[], seatMap: any) => {
+  const totalSeats = ticketTypes.reduce((sum, type) => sum + (Number(type.quantity) || 0), 0);
+  const vipSeats = ticketTypes
+    .filter((type) => String(type.name || '').trim().toLowerCase() === 'vip')
+    .reduce((sum, type) => sum + (Number(type.quantity) || 0), 0);
+
+  const currentSeatsPerRow = Number(seatMap?.seatsPerRow) || DEFAULT_SEATS_PER_ROW;
+  const candidates = getCommonDivisors(Math.max(1, totalSeats)).filter((divisor) => vipSeats === 0 || vipSeats % divisor === 0);
+  let seatsPerRow = currentSeatsPerRow;
+
+  if (candidates.length > 0) {
+    let bestCandidate = candidates[0]!;
+    const target = currentSeatsPerRow || DEFAULT_SEATS_PER_ROW;
+
+    for (const candidate of candidates) {
+      const bestDistance = Math.abs(bestCandidate - target);
+      const candidateDistance = Math.abs(candidate - target);
+
+      if (candidateDistance < bestDistance) {
+        bestCandidate = candidate;
+        continue;
+      }
+
+      if (candidateDistance === bestDistance && candidate > bestCandidate) {
+        bestCandidate = candidate;
+      }
+    }
+
+    seatsPerRow = bestCandidate;
+  }
+
+  const rows = Math.max(1, Math.ceil(totalSeats / seatsPerRow));
+  const vipRowCount = vipSeats > 0 ? Math.min(rows, Math.ceil(vipSeats / seatsPerRow)) : 0;
+
+  return {
+    rows,
+    seatsPerRow,
+    vipRows: Array.from({ length: vipRowCount }, (_, index) => index),
+    reservedSeats: Array.isArray(seatMap?.reservedSeats) ? seatMap.reservedSeats : [],
+  };
+};
+
 /**
  * Event Controller - CRUD + listing cho events
  */
@@ -88,6 +146,13 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
   try {
     const eventData = req.body;
 
+    if (Array.isArray(eventData.ticketTypes) && eventData.ticketTypes.length > 0) {
+      const totalSeats = eventData.ticketTypes.reduce((sum: number, type: any) => sum + (Number(type.quantity) || 0), 0);
+      eventData.totalSeats = totalSeats;
+      eventData.availableSeats = totalSeats;
+      eventData.seatMap = normalizeSeatMapFromTicketTypes(eventData.ticketTypes, eventData.seatMap);
+    }
+
     // Set availableSeats = totalSeats khi tạo mới
     if (eventData.totalSeats && !eventData.availableSeats) {
       eventData.availableSeats = eventData.totalSeats;
@@ -112,9 +177,22 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
  */
 export const updateEvent = async (req: AuthRequest, res: Response) => {
   try {
+    const updateData = { ...req.body };
+
+    if (Array.isArray(updateData.ticketTypes) && updateData.ticketTypes.length > 0) {
+      const totalSeats = updateData.ticketTypes.reduce((sum: number, type: any) => sum + (Number(type.quantity) || 0), 0);
+      updateData.totalSeats = totalSeats;
+      if (typeof updateData.availableSeats !== 'number') {
+        updateData.availableSeats = totalSeats;
+      } else {
+        updateData.availableSeats = Math.min(updateData.availableSeats, totalSeats);
+      }
+      updateData.seatMap = normalizeSeatMapFromTicketTypes(updateData.ticketTypes, updateData.seatMap);
+    }
+
     const event = await Event.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 

@@ -70,6 +70,21 @@ export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) =
 };
 
 /**
+ * Staff or Admin middleware - Check if user is staff or admin
+ * Must be used after protect middleware
+ */
+export const staffOrAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'staff') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Staff or Admin privileges required.',
+    });
+  }
+
+  return next();
+};
+
+/**
  * Validation error handler middleware
  */
 export const validationErrorHandler = (

@@ -41,23 +41,14 @@ export const generateTicketCode = async (): Promise<string> => {
  */
 export const generateQRData = (ticket: {
   ticketCode: string;
-  eventTitle: string;
-  date: Date;
-  seatNumber: string;
-  passengerName: string;
-  ticketType: string;
+  eventTitle?: string;
+  date?: Date;
+  seatNumber?: string;
+  passengerName?: string;
+  ticketType?: string;
 }): string => {
-  const verifyUrl = `http://localhost:5173/verify-ticket/${ticket.ticketCode}`;
-
-  return JSON.stringify({
-    code: ticket.ticketCode,
-    event: ticket.eventTitle,
-    date: ticket.date.toISOString(),
-    seat: ticket.seatNumber,
-    passenger: ticket.passengerName,
-    type: ticket.ticketType,
-    verify: verifyUrl,
-  });
+  const frontendUrl = process.env.FRONTEND_URL || 'https://jc-ticket.vercel.app';
+  return `${frontendUrl}/verify-ticket/${ticket.ticketCode}`;
 };
 
 /**

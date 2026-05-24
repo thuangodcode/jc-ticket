@@ -93,7 +93,7 @@ export const createPayOSOrder = async (req: AuthRequest, res: Response) => {
     }
 
     const amount = Math.round(booking.totalPrice);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://jc-ticket.vercel.app';
     const eventTitle = booking.eventId && (booking.eventId as any).title ? normalizeEventTitle((booking.eventId as any).title) : 'Ticket';
     const description = `TT ${booking.bookingCode} ${eventTitle}`.substring(0, 25).trim();
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeft, Download, Calendar, MapPin, User, Phone, Ticket } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useTheme } from '../contexts/ThemeContext';
 import { ticketService } from '../services/ticketService';
 import { Navbar } from '../components/Navbar';
@@ -27,8 +29,6 @@ export default function TicketDetailPage() {
 
   const handlePDF = async () => {
     try {
-      const { default: jsPDF } = await import('jspdf');
-      const { default: html2canvas } = await import('html2canvas');
       const el = document.getElementById('ticket-detail-print');
       if (!el) return;
       const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#fff' });
@@ -38,7 +38,10 @@ export default function TicketDetailPage() {
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, w, h);
       pdf.save(`JC-Ticket_${ticketCode}.pdf`);
       toast.success('PDF đã tải xuống!');
-    } catch { toast.error('Lỗi tạo PDF'); }
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi tạo PDF');
+    }
   };
 
   if (loading) return <div className={`min-h-screen ${isDark?'bg-ink':'bg-gray-50'}`}><Navbar/><div className="flex items-center justify-center h-96 pt-20"><div className="animate-spin w-12 h-12 border-4 border-akai border-t-transparent rounded-full"/></div></div>;

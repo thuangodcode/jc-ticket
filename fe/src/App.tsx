@@ -20,6 +20,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
 const MyTicketsPage = lazy(() => import('./pages/MyTicketsPage'));
 const TicketDetailPage = lazy(() => import('./pages/TicketDetailPage'));
+const VerifyTicketPage = lazy(() => import('./pages/VerifyTicketPage'));
 
 // Admin Pages
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
@@ -132,6 +133,7 @@ function AppContent() {
           <Route path="/payment/result" element={<PaymentResultPage />} />
           <Route path="/my-tickets" element={<MyTicketsPage />} />
           <Route path="/my-tickets/:ticketCode" element={<TicketDetailPage />} />
+          <Route path="/verify-ticket/:ticketCode" element={<VerifyTicketPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
