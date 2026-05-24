@@ -44,14 +44,14 @@ export default function AdminLayout() {
             <p className="font-bold text-sm">JC-Ticket</p>
             <p className="text-xs opacity-50">Admin Panel</p>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto"><X size={20}/></button>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto"><X size={20} /></button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map(item => (
             <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? active : inactive}`}>
-              <item.icon size={18}/>{item.label}
+              <item.icon size={18} />{item.label}
             </NavLink>
           ))}
         </nav>
@@ -62,21 +62,21 @@ export default function AdminLayout() {
             <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{user?.name}</p><p className="text-xs opacity-50">Admin</p></div>
           </div>
           <button onClick={() => { logout(); navigate('/'); }} className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${isDark ? 'text-red-400 hover:bg-red-900/20' : 'text-red-500 hover:bg-red-50'}`}>
-            <LogOut size={16}/>Đăng xuất
+            <LogOut size={16} />Đăng xuất
           </button>
         </div>
       </aside>
 
       {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}/>}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
       <main className="flex-1 min-h-screen">
         <header className={`sticky top-0 z-30 flex items-center gap-4 px-6 py-4 ${isDark ? 'bg-ink/95 border-zinc-800' : 'bg-white/95 border-gray-200'} border-b backdrop-blur`}>
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden"><Menu size={20}/></button>
-          <h2 className="text-lg font-bold">👋 {user?.name || 'Admin'}</h2>
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden"><Menu size={20} /></button>
+          <h2 className="text-lg font-bold">⚡ Admin Dashboard</h2>
         </header>
-        <div className="p-6"><Outlet/></div>
+        <div className="p-6"><Outlet /></div>
       </main>
     </div>
   );
