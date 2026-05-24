@@ -15,6 +15,7 @@ import uploadRoutes from './routes/upload';
 import { globalErrorHandler } from './middleware/auth';
 import { Booking } from './models/Booking';
 import { Event } from './models/Event';
+import { Ticket } from './models/Ticket';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,6 +75,28 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Cookie Parser Middleware - For reading/setting httpOnly cookies
 app.use(cookieParser());
 
+// Migrate existing tickets with localhost QR codes
+const migrateQRCodes = async () => {
+  try {
+    const frontendUrl = process.env.FRONTEND_URL || 'https://jc-ticket.vercel.app';
+    const tickets = await Ticket.find({ qrCodeData: { $regex: 'localhost:5173' } });
+    if (tickets.length > 0) {
+      console.log(`🔍 Found ${tickets.length} tickets with localhost QR codes. Migrating...`);
+      let updatedCount = 0;
+      for (const ticket of tickets) {
+        if (ticket.qrCodeData.includes('localhost:5173')) {
+          ticket.qrCodeData = ticket.qrCodeData.replace(/https?:\/\/localhost:5173/g, frontendUrl);
+          await ticket.save();
+          updatedCount++;
+        }
+      }
+      console.log(`✅ Successfully updated ${updatedCount} tickets' QR code data to point to: ${frontendUrl}`);
+    }
+  } catch (err) {
+    console.error('❌ Failed to migrate QR codes:', err);
+  }
+};
+
 // Kiểm tra MONGO_URI trước khi kết nối
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -86,6 +109,7 @@ if (!MONGO_URI) {
 mongoose.connect(MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected successfully');
+    migrateQRCodes();
   })
   .catch((err) => {
     console.error('❌ MongoDB Connection Error:', err);

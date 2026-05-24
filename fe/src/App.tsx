@@ -29,6 +29,7 @@ const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
 const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
 const AdminEventFormPage = lazy(() => import('./pages/admin/AdminEventFormPage'));
+const AdminScanPage = lazy(() => import('./pages/admin/AdminScanPage'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -101,8 +102,12 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.role === 'admin' && !location.pathname.startsWith('/admin')) {
-      navigate('/admin');
+    if (!isLoading && isAuthenticated && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff')) {
+      if (user?.role === 'admin') {
+        navigate('/admin');
+      } else if (user?.role === 'staff') {
+        navigate('/staff/check-in');
+      }
     }
   }, [user, isAuthenticated, isLoading, location.pathname, navigate]);
 
@@ -143,6 +148,11 @@ function AppContent() {
             <Route path="events" element={<AdminEvents />} />
             <Route path="events/create" element={<AdminEventFormPage />} />
             <Route path="events/edit/:id" element={<AdminEventFormPage />} />
+          </Route>
+
+          {/* Staff Routes */}
+          <Route path="/staff" element={<AdminLayout />}>
+            <Route path="check-in" element={<AdminScanPage />} />
           </Route>
         </Routes>
         <AuthModal />

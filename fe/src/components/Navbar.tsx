@@ -318,6 +318,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
                                 </Link>
                               )}
 
+                              {/* Staff Panel - Only for staff users */}
+                              {user.role === 'staff' && (
+                                <Link to="/staff/check-in">
+                                  <motion.div
+                                    whileHover={{
+                                      backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+                                    }}
+                                    className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
+                                      isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
+                                    }`}
+                                  >
+                                    <Shield size={16} />
+                                    <span>Staff Panel</span>
+                                  </motion.div>
+                                </Link>
+                              )}
+
                               {/* Divider */}
                               <div
                                 className={`my-1 ${isDark ? 'bg-midnight' : 'bg-cream'}`}
@@ -445,6 +462,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
                     <Ticket size={16} />
                     <span>{t('navbar.myTickets') || 'My Tickets'}</span>
                   </motion.button>
+                  {user.role === 'admin' && (
+                    <Link to="/admin" onClick={() => setIsOpen(false)} className="block w-full">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                          isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
+                        }`}
+                      >
+                        <Shield size={16} />
+                        <span>Admin Panel</span>
+                      </motion.button>
+                    </Link>
+                  )}
+                  {user.role === 'staff' && (
+                    <Link to="/staff/check-in" onClick={() => setIsOpen(false)} className="block w-full">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                          isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
+                        }`}
+                      >
+                        <Shield size={16} />
+                        <span>Staff Panel</span>
+                      </motion.button>
+                    </Link>
+                  )}
                   <motion.button
                     onClick={handleLogout}
                     whileHover={{ scale: 1.02 }}

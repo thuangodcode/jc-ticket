@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Ticket, CalendarDays,
-  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell
+  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/staff/check-in', icon: QrCode, label: 'Quét vé Check-in' },
   { to: '/admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { to: '/admin/tickets', icon: Ticket, label: 'Vé phát hành' },
   { to: '/admin/events', icon: CalendarDays, label: 'Sự kiện' },
@@ -24,6 +25,18 @@ export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
+  const isStaff = user?.role === 'staff';
+  const filteredNavItems = navItems.filter(item => {
+    if (isStaff) {
+      return item.to === '/staff/check-in';
+    }
+    return item.to !== '/staff/check-in';
+  });
+
+  const isCurrentRouteAllowed = isStaff
+    ? location.pathname === '/staff/check-in'
+    : location.pathname !== '/staff/check-in';
+
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
@@ -37,7 +50,7 @@ export default function AdminLayout() {
     );
   }
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'staff') {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0c0f1a] text-white' : 'bg-gray-50 text-ink'}`}>
         <motion.div
@@ -49,7 +62,7 @@ export default function AdminLayout() {
             <span className="text-3xl">🔒</span>
           </div>
           <h2 className="text-2xl font-bold mb-2">Truy cập bị từ chối</h2>
-          <p className="text-sm opacity-60 mb-6">Bạn cần quyền Admin để truy cập trang này.</p>
+          <p className="text-sm opacity-60 mb-6">Bạn cần quyền Admin hoặc Staff để truy cập trang này.</p>
           <button
             onClick={() => navigate('/')}
             className="px-8 py-3 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold hover:shadow-lg hover:shadow-akai/30 transition-all duration-300 hover:-translate-y-0.5"
@@ -65,6 +78,7 @@ export default function AdminLayout() {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === '/admin') return 'Dashboard';
+    if (path.includes('/scan')) return 'Quét vé Check-in';
     if (path.includes('/orders')) return 'Quản lý đơn hàng';
     if (path.includes('/tickets')) return 'Vé đã phát hành';
     if (path.includes('/events/create')) return 'Tạo sự kiện mới';
@@ -106,7 +120,7 @@ export default function AdminLayout() {
 
         {/* Navigation */}
         <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} py-4 space-y-1`}>
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -236,7 +250,7 @@ export default function AdminLayout() {
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Tài khoản</p>
                         <p className="text-sm font-semibold truncate mt-0.5">{user?.name}</p>
                         <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-akai/10 text-akai">
-                          Administrator
+                          {user?.role === 'admin' ? 'Administrator' : 'Staff'}
                         </span>
                       </div>
 
@@ -266,7 +280,27 @@ export default function AdminLayout() {
 
         {/* Page content */}
         <div className="flex-1 p-4 md:p-6 lg:p-8">
-          <Outlet />
+          {isCurrentRouteAllowed ? (
+            <Outlet />
+          ) : (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
+              <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mb-4">
+                <span className="text-2xl">🔒</span>
+              </div>
+              <h2 className="text-xl font-bold mb-2">Truy cập bị giới hạn</h2>
+              <p className={`text-xs max-w-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {isStaff
+                  ? 'Tài khoản của bạn thuộc vai trò Nhân viên (Staff), chỉ được phép truy cập và sử dụng chức năng quét check-in vé.'
+                  : 'Tài khoản của bạn thuộc vai trò Admin. Chức năng quét check-in vé bằng camera chỉ dành riêng cho vai trò Nhân viên (Staff).'}
+              </p>
+              <button
+                onClick={() => navigate(isStaff ? '/staff/check-in' : '/admin')}
+                className="px-6 py-2.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-xs hover:shadow-lg transition-all"
+              >
+                {isStaff ? 'Đến trang Quét vé Check-in' : 'Quay lại Dashboard'}
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

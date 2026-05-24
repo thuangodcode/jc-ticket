@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, User, Ticket } from 'lucide-react';
+import { LogOut, User, Ticket, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import type { User as UserType } from '../contexts/UserAuthContext';
@@ -216,6 +217,48 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
                 <Ticket size={16} className="flex-shrink-0" />
                 <span className="text-sm font-medium">{t('navbar.myTickets') || 'My Tickets'}</span>
               </motion.button>
+
+              {/* Admin Panel Link */}
+              {user.role === 'admin' && (
+                <Link to="/admin" onClick={() => setIsOpen(false)} className="block">
+                  <motion.button
+                    type="button"
+                    whileHover={{
+                      backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+                      paddingLeft: 20,
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={isLoading || isLoggingOut}
+                    className={`w-full px-4 py-2.5 text-left flex items-center space-x-3 transition-colors ${
+                      isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
+                    } ${(isLoading || isLoggingOut) && 'opacity-50 cursor-not-allowed'}`}
+                  >
+                    <Shield size={16} className="flex-shrink-0" />
+                    <span className="text-sm font-medium">Admin Panel</span>
+                  </motion.button>
+                </Link>
+              )}
+
+              {/* Staff Panel Link */}
+              {user.role === 'staff' && (
+                <Link to="/staff/check-in" onClick={() => setIsOpen(false)} className="block">
+                  <motion.button
+                    type="button"
+                    whileHover={{
+                      backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+                      paddingLeft: 20,
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={isLoading || isLoggingOut}
+                    className={`w-full px-4 py-2.5 text-left flex items-center space-x-3 transition-colors ${
+                      isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
+                    } ${(isLoading || isLoggingOut) && 'opacity-50 cursor-not-allowed'}`}
+                  >
+                    <Shield size={16} className="flex-shrink-0" />
+                    <span className="text-sm font-medium">Staff Panel</span>
+                  </motion.button>
+                </Link>
+              )}
 
               {/* Divider */}
               <div

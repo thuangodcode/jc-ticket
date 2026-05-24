@@ -45,7 +45,7 @@ export default function VerifyTicketPage() {
     };
   } | null>(null);
 
-  const isStaffOrAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'staff');
+  const isStaffOnly = isAuthenticated && user?.role === 'staff';
   const [autoCheckingIn, setAutoCheckingIn] = useState(false);
 
   const checkTicket = async () => {
@@ -70,13 +70,13 @@ export default function VerifyTicketPage() {
     }
   }, [ticketCode]);
 
-  // Tự động check-in khi staff/admin quét mã QR
+  // Tự động check-in khi staff quét mã QR
   useEffect(() => {
     if (
       !loading && 
       result?.valid && 
       result?.data?.status === 'active' && 
-      isStaffOrAdmin && 
+      isStaffOnly && 
       !checkingIn && 
       !autoCheckingIn
     ) {
@@ -97,7 +97,7 @@ export default function VerifyTicketPage() {
       };
       autoCheck();
     }
-  }, [loading, result, isStaffOrAdmin, ticketCode]);
+  }, [loading, result, isStaffOnly, ticketCode]);
 
   const handleCheckIn = async () => {
     if (!ticketCode) return;
@@ -124,11 +124,11 @@ export default function VerifyTicketPage() {
       
       <div className="flex-1 max-w-lg mx-auto w-full px-4 pt-24 pb-16 flex flex-col justify-center">
         <button 
-          onClick={() => navigate(isStaffOrAdmin ? '/admin/tickets' : '/')} 
+          onClick={() => navigate(isStaffOnly ? '/staff/check-in' : '/')} 
           className="flex items-center gap-2 text-akai mb-6 text-sm hover:underline"
         >
           <ArrowLeft size={16}/>
-          Quay lại {isStaffOrAdmin ? 'Quản lý vé' : 'Trang chủ'}
+          Quay lại {isStaffOnly ? 'Quét vé Check-in' : 'Trang chủ'}
         </button>
 
         {loading ? (
@@ -227,7 +227,7 @@ export default function VerifyTicketPage() {
                     </p>
                   </div>
                   
-                  {isStaffOrAdmin && result.data.status === 'active' && (
+                  {isStaffOnly && result.data.status === 'active' && (
                     <button
                       onClick={handleCheckIn}
                       disabled={checkingIn || autoCheckingIn}
@@ -239,11 +239,11 @@ export default function VerifyTicketPage() {
                   )}
                 </div>
 
-                {/* Staff/Admin Mode Badge */}
-                {isStaffOrAdmin && (
+                {/* Staff Mode Badge */}
+                {isStaffOnly && (
                   <div className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-akai/20 bg-akai/5 text-akai text-[11px] font-bold">
                     <ShieldCheck size={14} />
-                    Chế độ {user?.role === 'admin' ? 'Admin' : 'Staff'} - Nhân viên kiểm soát vé
+                    Chế độ Staff - Nhân viên kiểm soát vé
                   </div>
                 )}
               </div>
