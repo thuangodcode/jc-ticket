@@ -9,6 +9,11 @@ export interface ITicketType {
 /**
  * Event Interface - Cấu trúc document Event
  */
+export interface ICoordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface IEvent extends Document {
   title: string;
   description: string;
@@ -19,11 +24,13 @@ export interface IEvent extends Document {
   endDate?: Date;
   location: string;
   venue: string;
-  price: number;           // Giá vé cơ bản (VND)
-  vipPrice?: number;       // Giá vé VIP
+  formattedAddress?: string;  // Địa chỉ chi tiết đầy đủ (từ Nominatim geocoding)
+  coordinates?: ICoordinates; // Tọa độ { lat, lng } để hiển thị bản đồ
+  price: number;              // Giá vé cơ bản (VND)
+  vipPrice?: number;          // Giá vé VIP
   totalSeats: number;
   availableSeats: number;
-  seatMap: ISeatMap;       // Seat map configuration
+  seatMap: ISeatMap;          // Seat map configuration
   organizer: string;
   status: 'active' | 'cancelled' | 'completed' | 'draft';
   tags: string[];
@@ -96,6 +103,14 @@ const eventSchema = new Schema<IEvent>(
       type: String,
       required: [true, 'Venue is required'],
       trim: true,
+    },
+    formattedAddress: {
+      type: String,
+      trim: true,
+    },
+    coordinates: {
+      lat: { type: Number },
+      lng: { type: Number },
     },
     price: {
       type: Number,
