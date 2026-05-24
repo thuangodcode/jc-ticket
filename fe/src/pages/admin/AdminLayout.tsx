@@ -17,7 +17,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const { isDark, toggleDark } = useTheme();
-  const { user, logout } = useUserAuth();
+  const { user, logout, isLoading } = useUserAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,6 +27,14 @@ export default function AdminLayout() {
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0c0f1a] text-white' : 'bg-gray-50'}`}>
+        <div className="w-12 h-12 border-4 border-akai border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (user?.role !== 'admin') {
     return (
@@ -193,7 +201,9 @@ export default function AdminLayout() {
           </button>
 
           <div className="flex-1">
-            <h2 className="text-lg font-bold tracking-tight">{getPageTitle()}</h2>
+            <h2 className="text-lg font-bold tracking-tight">
+              {getPageTitle() === 'Dashboard' ? `👋 ${user?.name || 'Admin'}` : getPageTitle()}
+            </h2>
           </div>
 
           <div className="flex items-center gap-2">
