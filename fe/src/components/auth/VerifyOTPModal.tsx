@@ -67,6 +67,9 @@ const VerifyOTPModal: React.FC = () => {
         setSuccess(true);
 
         if (flow === 'registration') {
+          if (response.token) {
+            localStorage.setItem('accessToken', response.token);
+          }
           // 🎉 Registration flow: Verify OTP → Auto-login → Close modal → Show toast
           setTimeout(async () => {
             try {

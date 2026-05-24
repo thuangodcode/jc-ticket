@@ -88,6 +88,10 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       const response = await authService.login(email, password);
       console.log('📡 API Response:', response);
 
+      if (response.token) {
+        localStorage.setItem('accessToken', response.token);
+      }
+
       // Backend response structure: { success, message, data: { id, name, email, role } }
       const userData: User = {
         id: response.data.id || '',
@@ -180,10 +184,12 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       // Call backend logout to clear httpOnly cookie
       await authService.logout();
 
+      localStorage.removeItem('accessToken');
       setUser(null);
       setIsAuthenticated(false);
     } catch (err) {
       // Even if logout fails, clear local state
+      localStorage.removeItem('accessToken');
       setUser(null);
       setIsAuthenticated(false);
       

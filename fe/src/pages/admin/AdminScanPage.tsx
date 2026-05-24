@@ -111,12 +111,21 @@ export default function AdminScanPage() {
   // Helper to extract code from URL or text
   const extractTicketCode = (text: string): string => {
     const trimmed = text.trim();
-    // If it is a full URL containing verify-ticket or verify
+    
+    // Look for VE followed by 10 digits (Standard ticket code format)
+    const match = trimmed.match(/VE\d{10}/);
+    if (match) {
+      return match[0];
+    }
+    
+    // Fallback: If it is a full URL containing verify-ticket or verify
     if (trimmed.includes('/verify-ticket/')) {
-      return trimmed.split('/verify-ticket/')[1] || trimmed;
+      const code = trimmed.split('/verify-ticket/')[1] || trimmed;
+      return code.replace(/[^a-zA-Z0-9]/g, '');
     }
     if (trimmed.includes('/verify/')) {
-      return trimmed.split('/verify/')[1] || trimmed;
+      const code = trimmed.split('/verify/')[1] || trimmed;
+      return code.replace(/[^a-zA-Z0-9]/g, '');
     }
     return trimmed;
   };

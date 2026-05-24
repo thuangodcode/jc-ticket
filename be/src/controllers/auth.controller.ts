@@ -174,6 +174,7 @@ export const verifyOTP = async (req: any, res: Response) => {
     return res.status(200).json({
       success: true,
       message: 'Email verified successfully. Welcome!',
+      token,
       data: {
         id: user._id,
         name: user.name,
@@ -248,6 +249,7 @@ export const login = async (req: any, res: Response) => {
     return res.status(200).json({
       success: true,
       message: 'Login successful.',
+      token,
       data: {
         id: user._id,
         name: user.name,

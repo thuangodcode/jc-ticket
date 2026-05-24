@@ -9,6 +9,20 @@ const api = axios.create({
   withCredentials: true, // Gửi httpOnly cookies
 });
 
+// Request interceptor - attach authorization token if present
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Response interceptor - handle 401 globally
 api.interceptors.response.use(
   (response) => response,

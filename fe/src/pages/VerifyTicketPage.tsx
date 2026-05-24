@@ -20,7 +20,8 @@ import { Footer } from '../components/Footer';
 import { toast } from 'sonner';
 
 export default function VerifyTicketPage() {
-  const { ticketCode } = useParams<{ ticketCode: string }>();
+  const { ticketCode: rawTicketCode } = useParams<{ ticketCode: string }>();
+  const ticketCode = rawTicketCode ? (rawTicketCode.match(/VE\d{10}/)?.[0] || rawTicketCode.replace(/[^a-zA-Z0-9]/g, '')) : '';
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { user, isAuthenticated } = useUserAuth();
