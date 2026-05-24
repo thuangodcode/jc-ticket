@@ -4,6 +4,7 @@ import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthModalProvider } from './contexts/AuthModalContext';
 import { UserAuthProvider } from './contexts/UserAuthContext';
+import { useUserAuth } from './contexts/useUserAuth';
 const AuthModal = lazy(() => import('./components/AuthModal'));
 
 // Homepage Components
@@ -94,6 +95,24 @@ function HomePage() {
  * App Component with Router
  */
 function AppContent() {
+  const { user, isAuthenticated, isLoading } = useUserAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.role === 'admin' && !location.pathname.startsWith('/admin')) {
+      navigate('/admin');
+    }
+  }, [user, isAuthenticated, isLoading, location.pathname, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white text-ink">
+        <div className="w-12 h-12 border-4 border-akai border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <>
       <ScrollToTop />
