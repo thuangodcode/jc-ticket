@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { eventService } from '../services/eventService';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
+import MapPreview from '../components/MapPreview';
 
 /**
  * EventsPage - Trang danh sách tất cả sự kiện
@@ -192,6 +193,7 @@ export default function EventsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {events.map((event, index) => {
                   const isCopied = copiedId === event._id;
+                  const hasCoords = event.coordinates?.lat && event.coordinates?.lng;
                   const displayAddress =
                     event.formattedAddress || event.venue || event.location || '';
 
@@ -279,7 +281,21 @@ export default function EventsPage() {
                           </div>
                         </div>
 
-
+                        {/* Map Preview — luôn hiện khi có tọa độ */}
+                        {hasCoords && (
+                          <div
+                            className="mb-3 rounded-xl overflow-hidden"
+                            onClick={(e) => e.stopPropagation()} // Không trigger card click khi tương tác map
+                          >
+                            <MapPreview
+                              lat={event.coordinates.lat}
+                              lng={event.coordinates.lng}
+                              address={displayAddress}
+                              height={140}
+                              zoom={14}
+                            />
+                          </div>
+                        )}
 
                         <div className={`border-t pt-4 flex items-center justify-between ${isDark ? 'border-zinc-800' : 'border-gray-100'}`}>
                           <div>
