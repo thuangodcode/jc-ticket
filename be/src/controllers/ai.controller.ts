@@ -440,7 +440,7 @@ export const userChat = async (req: AuthRequest, res: Response) => {
       console.error('Gemini config error:', geminiKey.error);
       return res.status(503).json({
         success: false,
-        message: 'AI service is not configured. Use Gemini API key from Google AI Studio.',
+        message: geminiKey.error || 'AI service is not configured. Use Gemini API key from Google AI Studio.',
       });
     }
 
@@ -512,7 +512,7 @@ export const adminChat = async (req: AuthRequest, res: Response) => {
       console.error('Gemini config error:', geminiKey.error);
       return res.status(503).json({
         success: false,
-        message: 'AI service is not configured. Use Gemini API key from Google AI Studio.',
+        message: geminiKey.error || 'AI service is not configured. Use Gemini API key from Google AI Studio.',
       });
     }
 
