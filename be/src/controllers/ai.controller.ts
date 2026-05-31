@@ -21,8 +21,10 @@ function resolveGeminiApiKey(): GeminiKeyResolution {
 
   const normalized = raw.replace(/^Bearer\s+/i, '').trim();
 
-  // OAuth access tokens are not supported by @google/generative-ai SDK.
-  if (/^(ya29\.|AQ\.|1\/\/|eyJ)/.test(normalized)) {
+  // Reject only obvious OAuth access token formats.
+  // AI Studio API keys can have multiple formats over time (including AQ.*),
+  // so avoid strict prefix validation here.
+  if (/^(ya29\.|1\/\/)/.test(normalized)) {
     return {
       apiKey: null,
       error: 'Invalid Gemini credential type: expected API key from Google AI Studio, but received OAuth/Access token.',
