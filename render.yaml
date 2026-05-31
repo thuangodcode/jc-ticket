@@ -60,3 +60,7 @@ services:
         value: https://sb-openapi.zalopay.vn/v2
       - key: ZALOPAY_CALLBACK_URL
         value: https://jc-ticket.onrender.com/api/payment/zalopay/callback
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false

@@ -262,7 +262,9 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
       if (status === 429 || serverMsg?.includes('bận')) {
         errorText = '⏳ AI đang bận, vui lòng thử lại sau vài giây!';
       } else if (status === 503) {
-        errorText = '🔧 Dịch vụ AI chưa được cấu hình. Vui lòng liên hệ admin.';
+        errorText = serverMsg
+          ? `🔧 ${serverMsg}`
+          : '🔧 Dịch vụ AI chưa được cấu hình. Vui lòng liên hệ admin.';
       } else if (!navigator.onLine) {
         errorText = '📵 Mất kết nối mạng. Vui lòng kiểm tra internet.';
       }

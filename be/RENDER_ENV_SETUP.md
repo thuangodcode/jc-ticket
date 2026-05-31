@@ -36,6 +36,9 @@ Vào: **Render Dashboard → jc-ticket service → Environment → Add Environme
 | `PAYOS_CLIENT_ID` | `.env` |
 | `PAYOS_API_KEY` | `.env` |
 | `PAYOS_CHECKSUM_KEY` | `.env` |
+| `GEMINI_API_KEY` | API key từ Google AI Studio (không dùng OAuth token) |
+
+> Có thể dùng `GOOGLE_API_KEY` thay cho `GEMINI_API_KEY` nếu bạn đang chuẩn hóa theo tên biến Google. Chỉ cần set một trong hai biến là đủ.
 
 ---
 
