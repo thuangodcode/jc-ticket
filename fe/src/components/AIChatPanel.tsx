@@ -152,17 +152,22 @@ function CopyBtn({ text }: { text: string }) {
 
 interface AIChatPanelProps {
   isInline?: boolean;
+  mode?: 'user' | 'admin' | 'both';
   defaultTab?: 'user' | 'admin';
   onClose?: () => void;
 }
 
-export default function AIChatPanel({ isInline = false, defaultTab = 'user', onClose }: AIChatPanelProps) {
+export default function AIChatPanel({ isInline = false, mode = 'both', defaultTab = 'user', onClose }: AIChatPanelProps) {
   const { isDark } = useTheme();
   const { user } = useUserAuth();
   const isAdmin = user?.role === 'admin';
+  const allowRoleSwitch = mode === 'both' && isAdmin;
+  const initialTab = mode === 'both'
+    ? (isAdmin && defaultTab === 'admin' ? 'admin' : 'user')
+    : mode;
 
   const [activeTab, setActiveTab] = useState<'user' | 'admin'>(() => {
-    return isAdmin && defaultTab === 'admin' ? 'admin' : 'user';
+    return initialTab;
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -202,6 +207,12 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
       localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(adminMessages.slice(-MAX_ADMIN_HISTORY)));
     } catch { /* ignore */ }
   }, [adminMessages]);
+
+  useEffect(() => {
+    if (mode !== 'both' && activeTab !== mode) {
+      setActiveTab(mode);
+    }
+  }, [activeTab, mode]);
 
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
@@ -310,6 +321,9 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
     : 'bg-gray-50 text-gray-800 border border-gray-200/60 shadow-sm';
 
   const welcomePrompts = activeTab === 'user' ? USER_QUICK_PROMPTS : ADMIN_QUICK_PROMPTS;
+  const panelTitle = activeTab === 'user' ? 'JC Support AI' : 'JC Analysis AI';
+  const primaryTabLabel = 'Hỗ trợ người dùng';
+  const secondaryTabLabel = 'Phân tích admin';
 
   // ─────────────────────────────────────────────
   // Core Unified Chat Frame
@@ -332,7 +346,7 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
 
           <div className="flex-1 min-w-0">
             <h3 className="text-xs font-extrabold tracking-wide uppercase text-purple-400">
-              {activeTab === 'user' ? 'JC Support AI' : 'JC Analysis AI'}
+              {panelTitle}
             </h3>
             <p className={`text-[10px] flex items-center gap-1.5 mt-0.5 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               <span className="relative flex h-2 w-2">
@@ -376,7 +390,7 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
         </div>
 
         {/* Tab switcher (Only shown to Admin users) */}
-        {isAdmin && (
+        {allowRoleSwitch && (
           <div className="px-4 pb-2.5 flex">
             <div className={`p-1 rounded-xl flex gap-1 w-full relative ${
               isDark ? 'bg-black/20' : 'bg-gray-100'
@@ -391,7 +405,7 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
                 }`}
               >
                 <Ticket size={13} />
-                Trợ Lý Mua Vé
+                {primaryTabLabel}
               </button>
 
               {/* Tab 2 button */}
@@ -404,7 +418,7 @@ export default function AIChatPanel({ isInline = false, defaultTab = 'user', onC
                 }`}
               >
                 <ShieldCheck size={13} />
-                Phân Tích Admin
+                {secondaryTabLabel}
               </button>
 
               {/* Sliding background indicator */}
