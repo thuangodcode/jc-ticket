@@ -121,7 +121,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ onExploreClick, onTicket
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
               </div>
               <div className="mt-4 text-sm text-charcoal/60">
-                <p className={`${isDark ? 'text-cream/70' : 'text-charcoal/70'}`}>{t('hero.visualNote') || ''}</p>
+                <p className={`${isDark ? 'text-cream/70' : 'text-charcoal/70'}`}>{t('JC.TICKET') || ''}</p>
               </div>
             </motion.div>
           </div>
