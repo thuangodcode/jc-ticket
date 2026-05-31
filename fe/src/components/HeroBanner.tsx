@@ -117,7 +117,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ onExploreClick, onTicket
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
             <motion.div variants={fadeUp} className="w-full max-w-md bg-gradient-to-br from-white/60 to-cream/30 backdrop-blur rounded-2xl p-4 shadow-xl border border-cream/40">
               {/* Decorative scene - subtle background image placeholder */}
-              <div className="w-full h-56 rounded-xl overflow-hidden relative bg-[url('https://images.unsplash.com/photo-1549692520-acc6669e2f0c?w=1200&q=80&auto=format&fit=crop&s=placeholder')] bg-cover bg-center">
+              <div className="w-full h-56 rounded-xl overflow-hidden relative bg-[url('https://d1g90p0r985xbs.cloudfront.net/general/_1280x698_crop_center-center_45_line/Image_fx-4.jpg.webp')] bg-cover bg-center">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
               </div>
               <div className="mt-4 text-sm text-charcoal/60">
