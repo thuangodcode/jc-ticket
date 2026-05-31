@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, Users, Clock, ArrowLeft, Check, Star } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowLeft, Check, Star, Copy } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUserAuth } from '../contexts/useUserAuth';
 import { useAuthModal } from '../contexts/AuthModalContext';
@@ -10,6 +10,7 @@ import { bookingService } from '../services/bookingService';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { toast } from 'sonner';
+import MapPreview from '../components/MapPreview';
 
 /**
  * EventDetailPage - Chi tiết sự kiện + Seat Map + Booking Form
@@ -28,6 +29,27 @@ export default function EventDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [passengerInfo, setPassengerInfo] = useState({ name: '', email: '', phone: '' });
   const [imgSrc, setImgSrc] = useState<string>('');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = () => {
+    const address = event?.formattedAddress || event?.venue || event?.location || '';
+    if (!address) return;
+
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback
+      const el = document.createElement('textarea');
+      el.value = address;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   useEffect(() => {
     if (!user) {
@@ -223,6 +245,46 @@ export default function EventDetailPage() {
               <p className={`text-sm leading-relaxed ${isDark ? 'text-cream/70' : 'text-charcoal/70'}`}>
                 {event.description}
               </p>
+
+              {event.coordinates?.lat && event.coordinates?.lng && (
+                <div className={`mt-6 border-t pt-6 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
+                  <h3 className="text-md font-bold mb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <MapPin className="text-akai" size={16} /> Vị trí bản đồ
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyAddress}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                        copied
+                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          : isDark
+                          ? 'bg-zinc-800 text-zinc-300 hover:text-akai border border-zinc-700'
+                          : 'bg-gray-100 text-gray-600 hover:text-akai border border-gray-200'
+                      }`}
+                    >
+                      {copied ? (
+                        <>
+                          <Check size={12} />
+                          <span>Đã copy</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy địa chỉ</span>
+                        </>
+                      )}
+                    </button>
+                  </h3>
+                  <MapPreview
+                    lat={event.coordinates.lat}
+                    lng={event.coordinates.lng}
+                    address={event.formattedAddress || event.venue || event.location}
+                    height={300}
+                    zoom={15}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Seat Map */}
