@@ -6,6 +6,7 @@ import { AuthModalProvider } from './contexts/AuthModalContext';
 import { UserAuthProvider } from './contexts/UserAuthContext';
 import { useUserAuth } from './contexts/useUserAuth';
 const AuthModal = lazy(() => import('./components/AuthModal'));
+const UserAIChat = lazy(() => import('./components/UserAIChat'));
 
 // Homepage Components
 import {
@@ -156,6 +157,10 @@ function AppContent() {
           </Route>
         </Routes>
         <AuthModal />
+        {/* User AI Chat Widget — only on non-admin/staff pages */}
+        {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff') && (
+          <UserAIChat />
+        )}
       </Suspense>
     </>
   );

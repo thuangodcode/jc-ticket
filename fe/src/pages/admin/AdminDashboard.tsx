@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
 import { bookingService } from '../../services/bookingService';
+import AdminAIPanel from '../../components/admin/AdminAIPanel';
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -349,6 +350,11 @@ export default function AdminDashboard() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── AI Admin Assistant ── */}
+      <motion.div {...fadeUp} transition={{ delay: 0.45, duration: 0.4 }}>
+        <AdminAIPanel />
+      </motion.div>
     </div>
   );
 }

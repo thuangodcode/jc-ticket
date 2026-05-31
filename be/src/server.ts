@@ -12,6 +12,7 @@ import bookingRoutes from './routes/booking.routes';
 import ticketRoutes from './routes/ticket.routes';
 import paymentRoutes from './routes/payment.routes';
 import uploadRoutes from './routes/upload';
+import aiRoutes from './routes/ai.routes';
 import { globalErrorHandler } from './middleware/auth';
 import { Booking } from './models/Booking';
 import { Event } from './models/Event';
@@ -142,6 +143,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api', uploadRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 404 Handler
 app.use((_req, res) => {
