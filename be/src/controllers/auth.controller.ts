@@ -10,6 +10,8 @@ import {
   verifyOTPSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
+  changePasswordSchema,
 } from '../utils/validation';
 
 /**
@@ -514,6 +516,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         avatar: user.avatar,
       },
@@ -526,3 +529,117 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+/**
+ * PUT /api/auth/profile
+ * Update current user profile
+ */
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const validation = updateProfileSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validation.error.issues.map((e: any) => ({
+          field: e.path.join('.'),
+          message: e.message,
+        })),
+      });
+    }
+
+    const { name, phone, avatar } = validation.data;
+
+    const user = await User.findById(req.user?.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    user.name = name;
+    if (phone !== undefined) {
+      user.phone = phone;
+    }
+    if (avatar !== undefined) {
+      user.avatar = (avatar || undefined) as any;
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error: any) {
+    console.error('Update profile error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update profile.',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * PUT /api/auth/change-password
+ * Change current user password
+ */
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const validation = changePasswordSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validation.error.issues.map((e: any) => ({
+          field: e.path.join('.'),
+          message: e.message,
+        })),
+      });
+    }
+
+    const { oldPassword, newPassword } = validation.data;
+
+    const user = await User.findById(req.user?.id).select('+password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    const isMatch = await user.comparePassword(oldPassword);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mật khẩu cũ không chính xác.',
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Mật khẩu đã được thay đổi thành công',
+    });
+  } catch (error: any) {
+    console.error('Change password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to change password.',
+      error: error.message,
+    });
+  }
+};
+

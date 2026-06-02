@@ -240,3 +240,74 @@ export const sendPasswordResetOTP = async (
     throw new Error('Failed to send password reset email');
   }
 };
+
+/**
+ * Send a beautiful welcome/confirmation email for newsletter subscription
+ */
+export const sendWelcomeNewsletterEmail = async (email: string): Promise<void> => {
+  try {
+    await sendEmail({
+      to: email,
+      subject: '🌸 Chào mừng bạn đến với JC-Ticket - Đăng ký nhận tin thành công! 🌸',
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f9fa; padding: 40px 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 5px solid #FF5A79;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #FF5A79 0%, #FF8E53 100%); padding: 35px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">JC-Ticket</h1>
+              <p style="color: rgba(255, 255, 255, 0.9); margin: 5px 0 0 0; font-size: 14px; font-style: italic;">Cổng thông tin Lễ hội Nhật Bản & Sự kiện Âm nhạc hàng đầu</p>
+            </div>
+
+            <!-- Content Body -->
+            <div style="padding: 40px 30px; color: #333333; line-height: 1.8;">
+              <h2 style="color: #2c3e50; font-size: 20px; margin-top: 0; font-weight: 600;">Xin chào bạn,</h2>
+              
+              <p style="font-size: 15px; margin-bottom: 20px;">
+                Cảm ơn bạn đã quan tâm và đăng ký nhận thông tin sự kiện mới từ <strong>JC-Ticket</strong>. Chúng tôi rất vui mừng được đồng hành cùng bạn trên hành trình khám phá những lễ hội tuyệt vời nhất!
+              </p>
+
+              <p style="font-size: 15px; margin-bottom: 25px;">
+                Kể từ bây giờ, bạn sẽ là một trong những người đầu tiên nhận được:
+              </p>
+
+              <div style="background-color: #fff8f8; border-left: 4px solid #FF5A79; padding: 15px 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px;">
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #555555;">
+                  <li style="margin-bottom: 8px;">🔥 Thông tin sớm nhất về các lễ hội văn hóa Nhật Bản và nhạc hội lớn.</li>
+                  <li style="margin-bottom: 8px;">🎟️ Vé mở bán sớm (Early Bird) với các ưu đãi độc quyền hấp dẫn.</li>
+                  <li style="margin-bottom: 0;">🎁 Quà tặng bất ngờ, mini-game và code giảm giá dành riêng cho thành viên nhận tin.</li>
+                </ul>
+              </div>
+
+              <div style="text-align: center; margin: 35px 0;">
+                <a href="https://jc-ticket.onrender.com" target="_blank" style="background-color: #FF5A79; color: #ffffff; padding: 12px 30px; text-decoration: none; font-weight: 600; border-radius: 30px; display: inline-block; box-shadow: 0 4px 10px rgba(255, 90, 121, 0.3); transition: all 0.3s ease;">
+                  Khám Phá Sự Kiện Ngay
+                </a>
+              </div>
+
+              <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 0; line-height: 1.6;">
+                Nếu bạn có bất kỳ câu hỏi nào hoặc cần hỗ trợ đặt vé, đừng ngần ngại trả lời email này hoặc liên hệ hotline hỗ trợ của chúng tôi qua website nhé.
+              </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #fcfcfc; border-top: 1px solid #f1f2f6; padding: 25px 30px; text-align: center;">
+              <p style="font-size: 12px; color: #95a5a6; margin: 0 0 10px 0;">
+                Bạn nhận được email này vì đã đăng ký nhận tin tại trang web của chúng tôi. 
+              </p>
+              <p style="font-size: 12px; color: #bdc3c7; margin: 0;">
+                © ${new Date().getFullYear()} JC-Ticket. Mọi quyền được bảo lưu.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ [Newsletter Welcome Email] Sent successfully to ${email}`);
+  } catch (error) {
+    console.error('Error sending welcome newsletter email:', error);
+    // don't throw to avoid disrupting subscription API return status
+  }
+};
+

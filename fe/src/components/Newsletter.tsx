@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Send } from 'lucide-react';
+import { Mail, Send, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
+import { toast } from 'sonner';
+import { subscribeNewsletter } from '../services/newsletterService';
 
 interface NewsletterProps {
   onSubscribe?: (email: string) => void;
@@ -17,13 +19,41 @@ export const Newsletter: React.FC<NewsletterProps> = ({ onSubscribe }) => {
   const { isDark } = useTheme();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubscribe = () => {
-    if (email) {
+  const handleSubscribe = async () => {
+    if (!email) return;
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error(t('newsletter.error') || 'Vui lòng nhập email hợp lệ.', {
+        position: 'top-center',
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await subscribeNewsletter(email);
+      
       onSubscribe?.(email);
       setIsSubscribed(true);
       setEmail('');
-      setTimeout(() => setIsSubscribed(false), 3000);
+      
+      toast.success(response.message || t('newsletter.success') || 'Đăng ký nhận tin thành công!', {
+        position: 'top-center',
+      });
+      
+      setTimeout(() => setIsSubscribed(false), 5000);
+    } catch (error: any) {
+      console.error('Newsletter error:', error);
+      const errorMessage = error.response?.data?.message || 'Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.';
+      toast.error(errorMessage, {
+        position: 'top-center',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -102,6 +132,7 @@ export const Newsletter: React.FC<NewsletterProps> = ({ onSubscribe }) => {
                   type="email"
                   placeholder={t('newsletter.placeholder')}
                   value={email}
+                  disabled={isLoading}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={handleKeyPress}
                   className={`w-full pl-12 pr-4 py-4 rounded-lg border-2 focus:outline-none transition-colors font-medium ${
@@ -116,11 +147,20 @@ export const Newsletter: React.FC<NewsletterProps> = ({ onSubscribe }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubscribe}
-                disabled={!email}
+                disabled={!email || isLoading}
                 className="px-8 py-4 bg-akai text-white rounded-lg font-semibold hover:bg-sakura-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 whitespace-nowrap"
               >
-                <span>{isSubscribed ? t('newsletter.subscribed') : t('newsletter.subscribe')}</span>
-                <Send size={18} />
+                {isLoading ? (
+                  <>
+                    <span>Đang xử lý...</span>
+                    <Loader2 size={18} className="animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    <span>{isSubscribed ? t('newsletter.subscribed') : t('newsletter.subscribe')}</span>
+                    <Send size={18} />
+                  </>
+                )}
               </motion.button>
             </motion.div>
 

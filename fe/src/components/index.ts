@@ -14,3 +14,4 @@ export { Footer } from './Footer';
 // Auth & Protected Components
 export { RequireAuth, ProtectedRoute } from './RequireAuth';
 export { ProtectedButton, ProtectedButtonGroup } from './ProtectedButton';
+export { UserDropdown } from './UserDropdown';

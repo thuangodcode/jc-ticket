@@ -1,4 +1,13 @@
 import './config/loadEnv';
+import dns from 'dns';
+
+// Force Node to use Google DNS to bypass local SRV lookup ECONNREFUSED issues on Windows
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (e) {
+  console.debug('Failed to set custom DNS servers:', e);
+}
+
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -13,6 +22,7 @@ import ticketRoutes from './routes/ticket.routes';
 import paymentRoutes from './routes/payment.routes';
 import uploadRoutes from './routes/upload';
 import aiRoutes from './routes/ai.routes';
+import newsletterRoutes from './routes/newsletter.routes';
 import { globalErrorHandler } from './middleware/auth';
 import { Booking } from './models/Booking';
 import { Event } from './models/Event';
@@ -144,6 +154,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // 404 Handler
 app.use((_req, res) => {

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, Moon, Sun, Globe, LogOut, User, Ticket, Shield } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuthModal } from '../contexts/AuthModalContext';
 import { useUserAuth } from '../contexts/useUserAuth';
+import UserDropdown from './UserDropdown';
 
 interface NavbarProps {
   onSearchClick?: () => void;   // Giữ lại để sau này dùng
@@ -17,7 +18,6 @@ interface NavbarProps {
  */
 export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const { isDark, toggleDark } = useTheme();
   const { openModal } = useAuthModal();
@@ -50,7 +50,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
 
   const handleMenuClick = (target: string) => {
     setIsOpen(false);
-    setIsUserMenuOpen(false);
 
     if (target === 'events') {
       if (location.pathname === '/events') {
@@ -82,7 +81,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
   const handleLogout = async () => {
     try {
       await logout();
-      setIsUserMenuOpen(false);
       
       // Show logout toast
       toast.success('👋 Đã đăng xuất thành công! Hẹn gặp bạn lần sau.', {
@@ -204,163 +202,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
               {!isLoading && (
                 <>
                   {isAuthenticated && user ? (
-                    // User Menu - When authenticated
-                    <motion.div
-                      className="relative"
-                      onMouseEnter={() => setIsUserMenuOpen(true)}
-                      onMouseLeave={() => setIsUserMenuOpen(false)}
-                    >
-                      {/* User Avatar/Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                          isDark
-                            ? 'hover:bg-midnight text-cream'
-                            : 'hover:bg-cream text-charcoal'
-                        }`}
-                      >
-                        {/* Avatar Circle */}
-                        <div className="w-8 h-8 rounded-full bg-akai flex items-center justify-center text-white font-bold text-sm">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              alt={user.name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            user.name.charAt(0).toUpperCase()
-                          )}
-                        </div>
-                        {/* User Name */}
-                        <span className="font-medium text-sm hidden lg:inline">
-                          {user.name.split(' ')[0]}
-                        </span>
-                      </motion.button>
-
-                      {/* User Dropdown Menu */}
-                      <AnimatePresence>
-                        {isUserMenuOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg overflow-hidden z-50 ${
-                              isDark
-                                ? 'bg-charcoal border border-midnight'
-                                : 'bg-white border border-cream'
-                            }`}
-                          >
-                            {/* User Info Header */}
-                            <div
-                              className={`px-4 py-3 border-b ${
-                                isDark ? 'border-midnight bg-midnight/50' : 'border-cream bg-cream/50'
-                              }`}
-                            >
-                              <p className={`font-semibold ${isDark ? 'text-cream' : 'text-charcoal'}`}>
-                                {user.name}
-                              </p>
-                              <p
-                                className={`text-xs ${
-                                  isDark ? 'text-cream/60' : 'text-charcoal/60'
-                                }`}
-                              >
-                                {user.email}
-                              </p>
-                            </div>
-
-                            {/* Menu Items */}
-                            <div className="py-1">
-                              {/* Profile */}
-                              <Link to="/profile">
-                                <motion.div
-                                  whileHover={{
-                                    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                  }}
-                                  className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
-                                    isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'
-                                  }`}
-                                >
-                                  <User size={16} />
-                                  <span>{t('navbar.profile') || 'Profile'}</span>
-                                </motion.div>
-                              </Link>
-
-                              {/* My Tickets */}
-                              <Link to="/my-tickets">
-                                <motion.div
-                                  whileHover={{
-                                    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                  }}
-                                  className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
-                                    isDark ? 'text-cream hover:bg-midnight' : 'text-charcoal hover:bg-cream'
-                                  }`}
-                                >
-                                  <Ticket size={16} />
-                                  <span>{t('navbar.myTickets') || 'My Tickets'}</span>
-                                </motion.div>
-                              </Link>
-
-                              {/* Admin Panel - Only for admin users */}
-                              {user.role === 'admin' && (
-                                <Link to="/admin">
-                                  <motion.div
-                                    whileHover={{
-                                      backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                    }}
-                                    className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
-                                      isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
-                                    }`}
-                                  >
-                                    <Shield size={16} />
-                                    <span>Admin Panel</span>
-                                  </motion.div>
-                                </Link>
-                              )}
-
-                              {/* Staff Panel - Only for staff users */}
-                              {user.role === 'staff' && (
-                                <Link to="/staff/check-in">
-                                  <motion.div
-                                    whileHover={{
-                                      backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                    }}
-                                    className={`w-full px-4 py-2 flex items-center space-x-2 transition-colors ${
-                                      isDark ? 'text-amber-400 hover:bg-midnight' : 'text-amber-600 hover:bg-cream'
-                                    }`}
-                                  >
-                                    <Shield size={16} />
-                                    <span>Staff Panel</span>
-                                  </motion.div>
-                                </Link>
-                              )}
-
-                              {/* Divider */}
-                              <div
-                                className={`my-1 ${isDark ? 'bg-midnight' : 'bg-cream'}`}
-                                style={{ height: '1px' }}
-                              />
-
-                              {/* Logout */}
-                              <motion.button
-                                onClick={handleLogout}
-                                whileHover={{
-                                  backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                }}
-                                className={`w-full px-4 py-2 text-left flex items-center space-x-2 transition-colors ${
-                                  isDark
-                                    ? 'text-sakura hover:bg-midnight'
-                                    : 'text-akai hover:bg-cream'
-                                }`}
-                              >
-                                <LogOut size={16} />
-                                <span>{t('navbar.logout') || 'Logout'}</span>
-                              </motion.button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
+                    // User Menu - When authenticated using reusable component
+                    <UserDropdown
+                      user={user}
+                      onLogout={logout}
+                      onProfileClick={() => navigate('/profile')}
+                      onTicketsClick={() => navigate('/my-tickets')}
+                    />
                   ) : (
                     // Login & Register Buttons - When not authenticated
                     <>
@@ -438,30 +286,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchClick }) => {
                     <p className="font-semibold text-sm">{user.name}</p>
                     <p className="text-xs opacity-75">{user.email}</p>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                      isDark
-                        ? 'text-cream hover:bg-midnight'
-                        : 'text-charcoal hover:bg-cream'
-                    }`}
-                  >
-                    <User size={16} />
-                    <span>{t('navbar.profile') || 'Profile'}</span>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                      isDark
-                        ? 'text-cream hover:bg-midnight'
-                        : 'text-charcoal hover:bg-cream'
-                    }`}
-                  >
-                    <Ticket size={16} />
-                    <span>{t('navbar.myTickets') || 'My Tickets'}</span>
-                  </motion.button>
+                  <Link to="/profile" onClick={() => setIsOpen(false)} className="block w-full">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                        isDark
+                          ? 'text-cream hover:bg-midnight'
+                          : 'text-charcoal hover:bg-cream'
+                      }`}
+                    >
+                      <User size={16} />
+                      <span>{t('navbar.profile') || 'Profile'}</span>
+                    </motion.button>
+                  </Link>
+                  <Link to="/my-tickets" onClick={() => setIsOpen(false)} className="block w-full">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                        isDark
+                          ? 'text-cream hover:bg-midnight'
+                          : 'text-charcoal hover:bg-cream'
+                      }`}
+                    >
+                      <Ticket size={16} />
+                      <span>{t('navbar.myTickets') || 'My Tickets'}</span>
+                    </motion.button>
+                  </Link>
                   {user.role === 'admin' && (
                     <Link to="/admin" onClick={() => setIsOpen(false)} className="block w-full">
                       <motion.button
