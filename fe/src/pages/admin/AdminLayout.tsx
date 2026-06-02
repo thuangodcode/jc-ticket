@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Ticket, CalendarDays,
-  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode
+  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode, MessageSquare
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
@@ -14,6 +14,8 @@ const navItems = [
   { to: '/admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { to: '/admin/tickets', icon: Ticket, label: 'Vé phát hành' },
   { to: '/admin/events', icon: CalendarDays, label: 'Sự kiện' },
+  { to: '/admin/support', icon: MessageSquare, label: 'Hỗ trợ khách hàng' },
+  { to: '/staff/support', icon: MessageSquare, label: 'Hỗ trợ khách hàng' },
 ];
 
 export default function AdminLayout() {
@@ -28,14 +30,14 @@ export default function AdminLayout() {
   const isStaff = user?.role === 'staff';
   const filteredNavItems = navItems.filter(item => {
     if (isStaff) {
-      return item.to === '/staff/check-in';
+      return item.to === '/staff/check-in' || item.to === '/staff/support';
     }
-    return item.to !== '/staff/check-in';
+    return !item.to.startsWith('/staff');
   });
 
   const isCurrentRouteAllowed = isStaff
-    ? location.pathname === '/staff/check-in'
-    : location.pathname !== '/staff/check-in';
+    ? location.pathname === '/staff/check-in' || location.pathname === '/staff/support'
+    : !location.pathname.startsWith('/staff');
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -79,6 +81,7 @@ export default function AdminLayout() {
     const path = location.pathname;
     if (path === '/admin') return 'Dashboard';
     if (path.includes('/scan') || path.includes('/check-in')) return 'Quét vé Check-in';
+    if (path.includes('/support')) return 'Hỗ trợ trực tuyến';
     if (path.includes('/orders')) return 'Quản lý đơn hàng';
     if (path.includes('/tickets')) return 'Vé đã phát hành';
     if (path.includes('/events/create')) return 'Tạo sự kiện mới';

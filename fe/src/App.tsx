@@ -4,6 +4,7 @@ import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthModalProvider } from './contexts/AuthModalContext';
 import { UserAuthProvider } from './contexts/UserAuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 import { useUserAuth } from './contexts/useUserAuth';
 const AuthModal = lazy(() => import('./components/AuthModal'));
 const UserAIChat = lazy(() => import('./components/UserAIChat'));
@@ -32,6 +33,7 @@ const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
 const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
 const AdminEventFormPage = lazy(() => import('./pages/admin/AdminEventFormPage'));
 const AdminScanPage = lazy(() => import('./pages/admin/AdminScanPage'));
+const AdminSupportPage = lazy(() => import('./pages/admin/AdminSupportPage'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -151,11 +153,13 @@ function AppContent() {
             <Route path="events" element={<AdminEvents />} />
             <Route path="events/create" element={<AdminEventFormPage />} />
             <Route path="events/edit/:id" element={<AdminEventFormPage />} />
+            <Route path="support" element={<AdminSupportPage />} />
           </Route>
 
           {/* Staff Routes */}
           <Route path="/staff" element={<AdminLayout />}>
             <Route path="check-in" element={<AdminScanPage />} />
+            <Route path="support" element={<AdminSupportPage />} />
           </Route>
         </Routes>
         <AuthModal />
@@ -172,9 +176,11 @@ function App() {
   return (
     <ThemeProvider>
       <UserAuthProvider>
-        <AuthModalProvider>
-          <AppContent />
-        </AuthModalProvider>
+        <SocketProvider>
+          <AuthModalProvider>
+            <AppContent />
+          </AuthModalProvider>
+        </SocketProvider>
       </UserAuthProvider>
     </ThemeProvider>
   );

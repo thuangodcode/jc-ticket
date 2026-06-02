@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Send, RotateCcw, Sparkles, ChevronDown, Copy, Check, User, X, ShieldCheck, Ticket } from 'lucide-react';
+import { Bot, Send, RotateCcw, Sparkles, ChevronDown, Copy, Check, User, X, ShieldCheck, Ticket, MessageSquare, Loader2, Headphones } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUserAuth } from '../contexts/useUserAuth';
 import { aiService } from '../services/aiService';
 import type { ChatMessage } from '../services/aiService';
+import { useSocket } from '../contexts/SocketContext';
+import { chatService } from '../services/chatService';
+import { useAuthModal } from '../contexts/AuthModalContext';
 
 const USER_STORAGE_KEY = 'jc_user_ai_history';
 const ADMIN_STORAGE_KEY = 'jc_admin_ai_history';
@@ -194,6 +197,98 @@ export default function AIChatPanel({ isInline = false, mode = 'both', defaultTa
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const { socket } = useSocket();
+  const { switchModal } = useAuthModal();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Live support states
+  const [activeSubTab, setActiveSubTab] = useState<'ai' | 'support'>('ai');
+  const [liveMessages, setLiveMessages] = useState<any[]>([]);
+  const [isLiveLoading, setIsLiveLoading] = useState(false);
+  const [supportInput, setSupportInput] = useState('');
+  const [isStaffTyping, setIsStaffTyping] = useState(false);
+  const [staffName, setStaffName] = useState('');
+
+  // Lắng nghe sự kiện socket cho live chat (hỗ trợ viên)
+  useEffect(() => {
+    if (!socket || !user || activeSubTab !== 'support' || activeTab !== 'user') return;
+
+    const loadLiveHistory = async () => {
+      try {
+        setIsLiveLoading(true);
+        const history = await chatService.getHistory(user.id);
+        setLiveMessages(history);
+        
+        // Join room
+        socket.emit('join_room', user.id);
+      } catch (err) {
+        console.error('Failed to load live chat history:', err);
+      } finally {
+        setIsLiveLoading(false);
+      }
+    };
+
+    loadLiveHistory();
+
+    const handleReceiveMessage = (message: any) => {
+      if (message.room === user.id) {
+        setLiveMessages((prev) => [...prev, message]);
+        setIsStaffTyping(false);
+      }
+    };
+
+    const handleUserTyping = (data: { room: string; name: string; role: string; isTyping: boolean }) => {
+      if (data.room === user.id && (data.role === 'staff' || data.role === 'admin')) {
+        setStaffName(data.name);
+        setIsStaffTyping(data.isTyping);
+      }
+    };
+
+    socket.on('receive_message', handleReceiveMessage);
+    socket.on('user_typing', handleUserTyping);
+
+    return () => {
+      socket.off('receive_message', handleReceiveMessage);
+      socket.off('user_typing', handleUserTyping);
+    };
+  }, [socket, user, activeSubTab, activeTab]);
+
+  const sendSupportMessage = () => {
+    const text = supportInput.trim();
+    if (!text || !socket || !user) return;
+
+    socket.emit('send_message', {
+      room: user.id,
+      content: text,
+    });
+
+    socket.emit('typing', { room: user.id, isTyping: false });
+    setSupportInput('');
+    setTimeout(() => scrollToBottom(), 50);
+  };
+
+  const handleSupportInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setSupportInput(e.target.value);
+    if (!socket || !user) return;
+
+    socket.emit('typing', { room: user.id, isTyping: true });
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('typing', { room: user.id, isTyping: false });
+    }, 2000);
+  };
+
+  const handleSupportKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendSupportMessage();
+    }
+  };
 
   // Synchronize history save
   useEffect(() => {
@@ -440,6 +535,36 @@ export default function AIChatPanel({ isInline = false, mode = 'both', defaultTa
         )}
       </div>
 
+      {/* Subtab switcher for User chat: AI vs Live Staff support */}
+      {activeTab === 'user' && (
+        <div className="px-4 pb-2 pt-1 flex border-b border-current/10 shrink-0 bg-inherit">
+          <div className={`p-1 rounded-xl flex gap-1 w-full relative ${
+            isDark ? 'bg-black/20' : 'bg-gray-100'
+          }`}>
+            <button
+              onClick={() => setActiveSubTab('ai')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeSubTab === 'ai' 
+                  ? 'text-white bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 shadow-sm font-semibold' 
+                  : isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Trợ lý AI
+            </button>
+            <button
+              onClick={() => setActiveSubTab('support')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeSubTab === 'support' 
+                  ? 'text-white bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 shadow-sm font-semibold' 
+                  : isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Hỗ trợ viên
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Messages area */}
       <div
         ref={chatBodyRef}
@@ -447,128 +572,221 @@ export default function AIChatPanel({ isInline = false, mode = 'both', defaultTa
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth relative bg-inherit"
         style={{ scrollbarWidth: 'thin' }}
       >
-        {isEmpty ? (
-          /* Welcome state */
-          <div className="flex flex-col items-center justify-center h-full text-center px-2 py-4">
-            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-tr ${
-              activeTab === 'user' 
-                ? 'from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/20' 
-                : 'from-violet-500/10 to-indigo-500/10 border-violet-500/20'
-              } border flex items-center justify-center mb-4 relative shadow-inner`}>
-              <Sparkles size={28} className={`${activeTab === 'user' ? 'text-purple-500' : 'text-violet-500'} animate-pulse`} />
-              <div className="absolute inset-0 rounded-2xl bg-purple-500/5 blur-xl" />
-            </div>
-            
-            <h3 className="font-extrabold text-base mb-1 tracking-tight">
-              {activeTab === 'user' ? 'Xin chào quý khách! 👋' : 'Xin chào Admin! 📊'}
-            </h3>
-            
-            <p className={`text-xs mb-6 px-4 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {activeTab === 'user' 
-                ? 'Tôi là JC Assistant, sẵn sàng trợ giúp bạn tìm kiếm sự kiện, xem thông tin vé và tra cứu tình trạng đơn hàng.'
-                : 'Tôi là trợ lý Admin AI chuyên nghiệp. Tôi sẽ giúp bạn phân tích số liệu, tạo báo cáo doanh thu và so sánh sự kiện.'
-              }
-            </p>
-
-            {/* Quick prompts */}
-            <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
-              {welcomePrompts.map((p) => (
-                <motion.button
-                  key={p.text}
-                  whileHover={{ scale: 1.02, translateY: -1 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => sendMessage(p.text)}
-                  className={`flex items-center gap-2 px-3 py-3 rounded-xl text-left text-xs
-                    font-semibold transition-all duration-200 border shadow-sm
-                    ${isDark
-                      ? 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-purple-500/30 text-gray-300'
-                      : 'border-gray-200/70 bg-white hover:bg-purple-50/30 hover:border-purple-200 text-gray-700'
-                    }`}
-                >
-                  <span className="text-base shrink-0">{p.icon}</span>
-                  <span className="leading-snug">{p.text}</span>
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Messages list */
-          <>
-            {messages.map((msg, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} group`}
+        {activeTab === 'user' && activeSubTab === 'support' ? (
+          // ── Live Support Tab Body ──
+          !user ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4 py-8">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
+                <Headphones size={28} className="text-purple-500" />
+              </div>
+              <h3 className="font-extrabold text-sm mb-1">Trò chuyện với Hỗ trợ viên</h3>
+              <p className={`text-xs mb-6 px-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Vui lòng đăng nhập để bắt đầu kết nối trực tiếp với nhân viên hỗ trợ của chúng tôi.
+              </p>
+              <button
+                onClick={() => switchModal('login')}
+                className="px-6 py-2.5 bg-gradient-to-tr from-indigo-600 to-pink-600 text-white rounded-xl font-bold text-xs shadow-md hover:shadow-lg transition-all"
               >
-                {/* Avatar */}
-                <div className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center text-white shadow-sm
-                  ${msg.role === 'user'
-                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20'
-                    : activeTab === 'user'
-                      ? 'bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500'
-                      : 'bg-gradient-to-tr from-violet-500 via-purple-500 to-indigo-500 shadow-violet-500/20'
-                  }`}>
-                  {msg.role === 'user'
-                    ? <User size={13} />
-                    : <Bot size={13} className="text-white animate-pulse" />
-                  }
-                </div>
+                Đăng nhập ngay
+              </button>
+            </div>
+          ) : isLiveLoading ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 size={24} className="animate-spin text-purple-500" />
+            </div>
+          ) : liveMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4 py-8">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-purple-500/20 flex items-center justify-center mb-4 animate-pulse">
+                <MessageSquare size={28} className="text-purple-500" />
+              </div>
+              <h3 className="font-extrabold text-sm mb-1">Cổng hỗ trợ trực tiếp 🌸</h3>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Chào mừng bạn đến với kênh chat trực tuyến với Nhân viên hỗ trợ (Staff). Gửi tin nhắn bên dưới để bắt đầu cuộc trò chuyện.
+              </p>
+            </div>
+          ) : (
+            <>
+              {liveMessages.map((msg, i) => {
+                const isStaff = msg.senderRole === 'staff' || msg.senderRole === 'admin';
+                return (
+                  <motion.div
+                    key={msg._id || i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex gap-2.5 ${!isStaff ? 'flex-row-reverse' : 'flex-row'} group`}
+                  >
+                    {/* Avatar */}
+                    <div className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center text-white shadow-sm
+                      ${!isStaff
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20'
+                        : 'bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500'
+                      }`}>
+                      {!isStaff ? <User size={13} /> : <Headphones size={13} />}
+                    </div>
 
-                {/* Bubble */}
-                <div className={`flex-1 max-w-[76%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
-                  <div className={`relative px-3.5 py-2.5 rounded-2xl transition-all
-                    ${msg.role === 'user' 
-                      ? `${userBubble} rounded-tr-sm text-xs` 
-                      : `${aiBubble} rounded-tl-sm`
+                    {/* Bubble */}
+                    <div className={`flex-1 max-w-[76%] ${!isStaff ? 'flex justify-end' : ''}`}>
+                      <div className={`relative px-3.5 py-2.5 rounded-2xl transition-all
+                        ${!isStaff 
+                          ? `${userBubble} rounded-tr-sm text-xs` 
+                          : `${aiBubble} rounded-tl-sm text-xs`
+                        }`}>
+                        <div className="font-semibold text-[9px] mb-1 opacity-70">
+                          {isStaff ? 'Hỗ trợ viên' : msg.senderName}
+                        </div>
+                        <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                      <p className={`text-[9px] mt-1 px-1 font-medium ${
+                        !isStaff ? 'text-right' : 'text-left'
+                      } ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {/* Typing indicator */}
+              {isStaffTyping && (
+                <div className="flex gap-2.5">
+                  <div className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center ${
+                    isDark ? 'bg-white/[0.06] border border-white/[0.08]' : 'bg-gray-100 border border-gray-200'
+                  }`}>
+                    <User size={13} className="text-purple-500 animate-pulse" />
+                  </div>
+                  <div className={`px-4 py-3 rounded-2xl rounded-tl-sm ${aiBubble}`}>
+                    <span className="text-xs italic font-medium opacity-80">{staffName} đang trả lời...</span>
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        ) : (
+          // ── Original AI Chat Body ──
+          isEmpty ? (
+            /* Welcome state */
+            <div className="flex flex-col items-center justify-center h-full text-center px-2 py-4">
+              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-tr ${
+                activeTab === 'user' 
+                  ? 'from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/20' 
+                  : 'from-violet-500/10 to-indigo-500/10 border-violet-500/20'
+                } border flex items-center justify-center mb-4 relative shadow-inner`}>
+                <Sparkles size={28} className={`${activeTab === 'user' ? 'text-purple-500' : 'text-violet-500'} animate-pulse`} />
+                <div className="absolute inset-0 rounded-2xl bg-purple-500/5 blur-xl" />
+              </div>
+              
+              <h3 className="font-extrabold text-base mb-1 tracking-tight">
+                {activeTab === 'user' ? 'Xin chào quý khách! 👋' : 'Xin chào Admin! 📊'}
+              </h3>
+              
+              <p className={`text-xs mb-6 px-4 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {activeTab === 'user' 
+                  ? 'Tôi là JC Assistant, sẵn sàng trợ giúp bạn tìm kiếm sự kiện, xem thông tin vé và tra cứu tình trạng đơn hàng.'
+                  : 'Tôi là trợ lý Admin AI chuyên nghiệp. Tôi sẽ giúp bạn phân tích số liệu, tạo báo cáo doanh thu và so sánh sự kiện.'
+                }
+              </p>
+
+              {/* Quick prompts */}
+              <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                {welcomePrompts.map((p) => (
+                  <motion.button
+                    key={p.text}
+                    whileHover={{ scale: 1.02, translateY: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => sendMessage(p.text)}
+                    className={`flex items-center gap-2 px-3 py-3 rounded-xl text-left text-xs
+                      font-semibold transition-all duration-200 border shadow-sm
+                      ${isDark
+                        ? 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-purple-500/30 text-gray-300'
+                        : 'border-gray-200/70 bg-white hover:bg-purple-50/30 hover:border-purple-200 text-gray-700'
+                      }`}
+                  >
+                    <span className="text-base shrink-0">{p.icon}</span>
+                    <span className="leading-snug">{p.text}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Messages list */
+            <>
+              {messages.map((msg, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} group`}
+                >
+                  {/* Avatar */}
+                  <div className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center text-white shadow-sm
+                    ${msg.role === 'user'
+                      ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20'
+                      : activeTab === 'user'
+                        ? 'bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500'
+                        : 'bg-gradient-to-tr from-violet-500 via-purple-500 to-indigo-500 shadow-violet-500/20'
                     }`}>
-                    {msg.role === 'assistant' ? (
-                      <>
-                        <RenderMarkdownContent text={msg.content} />
-                        <CopyBtn text={msg.content} />
-                      </>
-                    ) : (
-                      <span className="text-xs leading-relaxed">{msg.content}</span>
+                    {msg.role === 'user'
+                      ? <User size={13} />
+                      : <Bot size={13} className="text-white animate-pulse" />
+                    }
+                  </div>
+
+                  {/* Bubble */}
+                  <div className={`flex-1 max-w-[76%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
+                    <div className={`relative px-3.5 py-2.5 rounded-2xl transition-all
+                      ${msg.role === 'user' 
+                        ? `${userBubble} rounded-tr-sm text-xs` 
+                        : `${aiBubble} rounded-tl-sm`
+                      }`}>
+                      {msg.role === 'assistant' ? (
+                        <>
+                          <RenderMarkdownContent text={msg.content} />
+                          <CopyBtn text={msg.content} />
+                        </>
+                      ) : (
+                        <span className="text-xs leading-relaxed">{msg.content}</span>
+                      )}
+                    </div>
+                    {msg.timestamp && (
+                      <p className={`text-[9px] mt-1 px-1 font-medium ${
+                        msg.role === 'user' ? 'text-right' : 'text-left'
+                      } ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                        {new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     )}
                   </div>
-                  {msg.timestamp && (
-                    <p className={`text-[9px] mt-1 px-1 font-medium ${
-                      msg.role === 'user' ? 'text-right' : 'text-left'
-                    } ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
 
-            {/* Typing indicator */}
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-2.5"
-              >
-                <div className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center
-                  ${isDark ? 'bg-white/[0.06] border border-white/[0.08]' : 'bg-gray-100 border border-gray-200'}`}>
-                  <Bot size={13} className="text-purple-500 animate-pulse" />
-                </div>
-                <div className={`px-4 py-3 rounded-2xl rounded-tl-sm ${aiBubble}`}>
-                  <div className="flex gap-1.5 items-center">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ y: [0, -4, 0] }}
-                        transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
-                        className={`w-1.5 h-1.5 rounded-full ${activeTab === 'user' ? 'bg-purple-500' : 'bg-violet-500'}`}
-                      />
-                    ))}
+              {/* Typing indicator */}
+              {isLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-2.5"
+                >
+                  <div className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center
+                    ${isDark ? 'bg-white/[0.06] border border-white/[0.08]' : 'bg-gray-100 border border-gray-200'}`}>
+                    <Bot size={13} className="text-purple-500 animate-pulse" />
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </>
+                  <div className={`px-4 py-3 rounded-2xl rounded-tl-sm ${aiBubble}`}>
+                    <div className="flex gap-1.5 items-center">
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
+                          className={`w-1.5 h-1.5 rounded-full ${activeTab === 'user' ? 'bg-purple-500' : 'bg-violet-500'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </>
+          )
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -596,7 +814,7 @@ export default function AIChatPanel({ isInline = false, mode = 'both', defaultTa
         isDark ? 'border-white/[0.08]' : 'border-gray-200/50'
       }`}>
         {/* Suggested quick queries after first message */}
-        {!isEmpty && (
+        {activeSubTab === 'ai' && !isEmpty && (
           <div className="flex gap-2 mb-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {welcomePrompts.slice(0, 3).map((q) => (
               <motion.button
@@ -623,12 +841,18 @@ export default function AIChatPanel({ isInline = false, mode = 'both', defaultTa
           <textarea
             ref={inputRef}
             id="unified-ai-chat-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={activeTab === 'user' ? "Hỏi tôi về sự kiện, vé, đơn hàng..." : "Hỏi về doanh thu, thống kê sự kiện..."}
+            value={activeTab === 'user' && activeSubTab === 'support' ? supportInput : input}
+            onChange={activeTab === 'user' && activeSubTab === 'support' ? handleSupportInputChange : (e) => setInput(e.target.value)}
+            onKeyDown={activeTab === 'user' && activeSubTab === 'support' ? handleSupportKeyDown : handleKeyDown}
+            placeholder={
+              activeTab === 'user'
+                ? activeSubTab === 'support'
+                  ? "Nhắn tin trực tiếp với Hỗ trợ viên..."
+                  : "Hỏi tôi về sự kiện, vé, đơn hàng..."
+                : "Hỏi về doanh thu, thống kê sự kiện..."
+            }
             rows={1}
-            disabled={isLoading}
+            disabled={activeTab === 'user' && activeSubTab === 'support' ? (!user || isLiveLoading) : isLoading}
             className={`flex-1 bg-transparent resize-none text-xs outline-none leading-relaxed
               max-h-24 overflow-y-auto placeholder-gray-400 disabled:opacity-50
               ${isDark ? 'text-gray-100' : 'text-gray-800'}`}
@@ -637,8 +861,12 @@ export default function AIChatPanel({ isInline = false, mode = 'both', defaultTa
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => sendMessage()}
-            disabled={!input.trim() || isLoading}
+            onClick={activeTab === 'user' && activeSubTab === 'support' ? sendSupportMessage : () => sendMessage()}
+            disabled={
+              activeTab === 'user' && activeSubTab === 'support'
+                ? !supportInput.trim() || !user
+                : !input.trim() || isLoading
+            }
             id="unified-ai-chat-send"
             className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${
               activeTab === 'user' 
