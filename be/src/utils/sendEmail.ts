@@ -311,3 +311,69 @@ export const sendWelcomeNewsletterEmail = async (email: string): Promise<void> =
   }
 };
 
+/**
+ * Send a welcome email when a user registers a new account
+ */
+export const sendWelcomeEmail = async (email: string, name: string): Promise<void> => {
+  try {
+    await sendEmail({
+      to: email,
+      subject: '🌸 Chào mừng thành viên mới của JC-Ticket! 🌸',
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f9fa; padding: 40px 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 5px solid #DC143C;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #DC143C 0%, #FF8E53 100%); padding: 35px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">JC-Ticket</h1>
+              <p style="color: rgba(255, 255, 255, 0.9); margin: 5px 0 0 0; font-size: 14px; font-style: italic;">Chào mừng bạn đến với Lễ hội Nhật Bản & Sự kiện Âm nhạc</p>
+            </div>
+
+            <!-- Content Body -->
+            <div style="padding: 40px 30px; color: #333333; line-height: 1.8;">
+              <h2 style="color: #2c3e50; font-size: 20px; margin-top: 0; font-weight: 600;">Chào ${name},</h2>
+              
+              <p style="font-size: 15px; margin-bottom: 20px;">
+                Chúc mừng bạn đã đăng ký tài khoản thành công tại <strong>JC-Ticket</strong>! Chúng tôi rất vui mừng chào đón bạn gia nhập cộng đồng yêu thích văn hóa Nhật Bản và âm nhạc sôi động.
+              </p>
+
+              <p style="font-size: 15px; margin-bottom: 20px;">
+                Tài khoản của bạn đã được kích hoạt sẵn sàng để sử dụng. Từ bây giờ bạn có thể:
+              </p>
+
+              <div style="background-color: #fffcfc; border-left: 4px solid #DC143C; padding: 15px 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px;">
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #555555;">
+                  <li style="margin-bottom: 8px;">🎟️ Đặt vé tham gia các lễ hội và sự kiện cực nhanh chóng.</li>
+                  <li style="margin-bottom: 8px;">📂 Quản lý vé điện tử trực tuyến, xem chi tiết và quét mã QR xác thực dễ dàng.</li>
+                  <li style="margin-bottom: 0;">💬 Trò chuyện trực tiếp với trợ lý ảo AI để được tư vấn thông tin sự kiện tốt nhất.</li>
+                </ul>
+              </div>
+
+              <div style="text-align: center; margin: 35px 0;">
+                <a href="https://jc-ticket.onrender.com" target="_blank" style="background-color: #DC143C; color: #ffffff; padding: 12px 30px; text-decoration: none; font-weight: 600; border-radius: 30px; display: inline-block; box-shadow: 0 4px 10px rgba(220, 20, 60, 0.3); transition: all 0.3s ease;">
+                  Bắt Đầu Đặt Vé Ngay
+                </a>
+              </div>
+
+              <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 0; line-height: 1.6;">
+                Nếu có bất kỳ khó khăn hay thắc mắc nào trong quá trình trải nghiệm dịch vụ, hãy liên hệ ngay với bộ phận chăm sóc khách hàng của chúng tôi để được hỗ trợ tận tình.
+              </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #fcfcfc; border-top: 1px solid #f1f2f6; padding: 25px 30px; text-align: center;">
+              <p style="font-size: 12px; color: #bdc3c7; margin: 0;">
+                © ${new Date().getFullYear()} JC-Ticket. Mọi quyền được bảo lưu.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ [Welcome Email] Sent successfully to ${email}`);
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+  }
+};
+

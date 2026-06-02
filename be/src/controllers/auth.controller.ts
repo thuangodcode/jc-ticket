@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { generateOTP, getOTPExpirationTime, isOTPExpired } from '../utils/otp';
-import { sendPasswordResetOTP } from '../utils/sendEmail';
+import { sendPasswordResetOTP, sendWelcomeEmail } from '../utils/sendEmail';
 import {
   registerSchema,
   loginSchema,
@@ -74,6 +74,11 @@ export const register = async (req: any, res: Response) => {
       phone,
       password,
       isVerified: true,
+    });
+
+    // Send welcome email in background (fire-and-forget)
+    sendWelcomeEmail(newUser.email, newUser.name).catch((err) => {
+      console.error('❌ Failed to send welcome email to new user:', err);
     });
 
     // Generate JWT token
