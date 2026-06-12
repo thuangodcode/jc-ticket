@@ -11,7 +11,8 @@ export interface User {
   phone?: string;
   email: string;
   avatar?: string;
-  role: 'user' | 'admin' | 'staff';
+  role: 'user' | 'admin' | 'event_admin' | 'staff';
+  managedEventIds: string[];
   isVerified: boolean;
   createdAt: string;
 }
@@ -51,6 +52,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
         email: response.data.email || '',
         avatar: response.data.avatar,
         role: response.data.role || 'user',
+        managedEventIds: response.data.managedEventIds || [],
         isVerified: true,
         createdAt: new Date().toISOString(),
       };
@@ -100,6 +102,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
         email: response.data.email || '',
         avatar: response.data.avatar,
         role: response.data.role || 'user',
+        managedEventIds: response.data.managedEventIds || [],
         isVerified: true,
         createdAt: new Date().toISOString(),
       };
@@ -297,6 +300,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
             email: response.data.email || '',
             avatar: response.data.avatar,
             role: response.data.role || 'user',
+            managedEventIds: response.data.managedEventIds || [],
             isVerified: true,
             createdAt: new Date().toISOString(),
           };

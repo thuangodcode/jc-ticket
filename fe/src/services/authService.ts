@@ -182,6 +182,27 @@ export const authService = {
   resetPassword: async (email: string, otp: string, newPassword: string) => {
     return resetPasswordService({ email, otp, newPassword });
   },
+
+  // Event Admin management (super admin only)
+  assignEventAdmin: async (email: string, eventIds: string[]) => {
+    const response = await authAPI.post('/assign-event-admin', { email, eventIds });
+    return response.data;
+  },
+
+  revokeEventAdmin: async (userId: string) => {
+    const response = await authAPI.post('/revoke-event-admin', { userId });
+    return response.data;
+  },
+
+  getEventAdmins: async () => {
+    const response = await authAPI.get('/event-admins');
+    return response.data;
+  },
+
+  createEventAdmin: async (data: any) => {
+    const response = await authAPI.post('/create-event-admin', data);
+    return response.data;
+  },
 };
 
 export default authAPI;

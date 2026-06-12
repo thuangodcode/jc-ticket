@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, RefreshCw, Plus, Edit3, Search, Image } from 'lucide-react';
+import { Trash2, RefreshCw, Plus, Edit3, Search, Image, UserPlus, X } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useUserAuth } from '../../contexts/useUserAuth';
 import { eventService } from '../../services/eventService';
+import { authService } from '../../services/authService';
 import { toast } from 'sonner';
 
 const statusConfig: Record<string, { bg: string; text: string; label: string; dot: string }> = {
@@ -15,10 +17,18 @@ const statusConfig: Record<string, { bg: string; text: string; label: string; do
 export default function AdminEvents() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { user } = useUserAuth();
+  const isEventAdmin = user?.role === 'event_admin';
+  const isSuperAdmin = user?.role === 'admin';
+  const routePrefix = isEventAdmin ? '/event-admin' : '/admin';
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [assignModal, setAssignModal] = useState<{ eventId: string; eventTitle: string } | null>(null);
+  const [assignEmail, setAssignEmail] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [eventAdminsList, setEventAdminsList] = useState<any[]>([]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -26,7 +36,13 @@ export default function AdminEvents() {
       const params: any = { limit: 50, status: statusFilter };
       if (search) params.search = search;
       const res = await eventService.getEvents(params);
-      setEvents(res.data);
+      let data = res.data;
+      // Event admin: filter to only managed events
+      if (isEventAdmin) {
+        const managedIds = user?.managedEventIds || [];
+        data = data.filter((e: any) => managedIds.includes(e._id));
+      }
+      setEvents(data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -39,6 +55,12 @@ export default function AdminEvents() {
     return () => clearTimeout(delayDebounceFn);
   }, [statusFilter, search]);
 
+  useEffect(() => {
+    if (isSuperAdmin) {
+      authService.getEventAdmins().then(res => setEventAdminsList(res.data)).catch(console.error);
+    }
+  }, [isSuperAdmin]);
+
   const handleDelete = async (id: string) => {
     if (!confirm('Bạn có chắc muốn xóa sự kiện này?')) return;
     try {
@@ -46,6 +68,21 @@ export default function AdminEvents() {
       toast.success('Đã xóa sự kiện');
       fetchEvents();
     } catch (err: any) { toast.error(err.response?.data?.message || 'Lỗi'); }
+  };
+
+  const handleAssignEventAdmin = async () => {
+    if (!assignModal || !assignEmail.trim()) return;
+    setAssigning(true);
+    try {
+      await authService.assignEventAdmin(assignEmail.trim(), [assignModal.eventId]);
+      toast.success(`Đã gán Event Admin cho sự kiện "${assignModal.eventTitle}"`);
+      setAssignModal(null);
+      setAssignEmail('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Không thể gán Event Admin');
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const card = isDark
@@ -108,8 +145,8 @@ export default function AdminEvents() {
           </div>
 
           <button
-            onClick={() => navigate('/admin/events/create')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-gradient-to-r from-akai to-sakura-dark text-white hover:shadow-lg hover:shadow-akai/25 transition-all duration-300 hover:-translate-y-0.5 shrink-0"
+            onClick={() => navigate(`${routePrefix}/events/create`)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-gradient-to-r from-akai to-sakura-dark text-white hover:shadow-lg hover:shadow-akai/25 transition-all duration-300 hover:-translate-y-0.5 shrink-0 ${isEventAdmin ? 'hidden' : ''}`}
           >
             <Plus size={14} />
             Tạo sự kiện
@@ -138,7 +175,7 @@ export default function AdminEvents() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className={`border-b ${isDark ? 'border-white/[0.06] bg-white/[0.02]' : 'border-gray-100 bg-gray-50/50'}`}>
-                {['Hình', 'Tên sự kiện', 'Ngày', 'Địa điểm', 'Giá', 'Ghế', 'Trạng thái', 'Thao tác'].map(h => (
+                {['Hình', 'Tên sự kiện', 'Ngày', 'Địa điểm', 'Giá', 'Ghế', 'Trạng thái', 'Quản lý', 'Thao tác'].map(h => (
                   <th key={h} className={`text-left py-3.5 px-4 font-semibold text-[11px] uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                     {h}
                   </th>
@@ -164,6 +201,9 @@ export default function AdminEvents() {
                 </tr>
               ) : events.map(e => {
                 const status = statusConfig[e.status] || statusConfig.active;
+                const assignedAdmin = eventAdminsList.find(admin => 
+                  admin.managedEventIds?.some((m: any) => m._id === e._id || m.id === e._id || m === e._id)
+                );
                 return (
                   <tr
                     key={e._id}
@@ -203,21 +243,54 @@ export default function AdminEvents() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
+                      {assignedAdmin ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold px-2 py-1 bg-violet-500/10 text-violet-500 rounded-md truncate max-w-[90px]" title={assignedAdmin.email}>
+                            {assignedAdmin.name}
+                          </span>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => setAssignModal({ eventId: e._id, eventTitle: e.title })}
+                              className="text-gray-400 hover:text-violet-500 transition-colors"
+                              title="Đổi quản lý"
+                            >
+                              <Edit3 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className={`text-[11px] italic mr-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Chưa có</span>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => setAssignModal({ eventId: e._id, eventTitle: e.title })}
+                              className="p-1 rounded bg-violet-500/10 text-violet-500 hover:bg-violet-500/20 transition-colors"
+                              title="Gán quản lý"
+                            >
+                              <UserPlus size={12} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="flex gap-1.5">
                         <button
-                          onClick={() => navigate(`/admin/events/edit/${e._id}`)}
+                          onClick={() => navigate(`${routePrefix}/events/edit/${e._id}`)}
                           title="Chỉnh sửa"
                           className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors"
                         >
                           <Edit3 size={14} />
                         </button>
-                        <button
-                          onClick={() => handleDelete(e._id)}
-                          title="Xóa"
-                          className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleDelete(e._id)}
+                            title="Xóa"
+                            className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -227,6 +300,79 @@ export default function AdminEvents() {
           </table>
         </div>
       </div>
+
+      {/* ── Assign Event Admin Modal ── */}
+      {assignModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAssignModal(null)}>
+          <div
+            onClick={e => e.stopPropagation()}
+            className={`${card} rounded-2xl p-6 max-w-md w-full`}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold">Gán Event Admin</h3>
+              <button onClick={() => setAssignModal(null)} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/[0.06]' : 'hover:bg-gray-100'}`}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={`text-center py-3 px-3 rounded-xl mb-5 ${isDark ? 'bg-white/[0.03]' : 'bg-gray-50'}`}>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sự kiện</p>
+              <p className="text-sm font-bold mt-1">{assignModal.eventTitle}</p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className={`text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tài khoản Event Admin</label>
+                <select
+                  value={assignEmail}
+                  onChange={(e) => setAssignEmail(e.target.value)}
+                  className={`
+                    w-full mt-1.5 px-4 py-3 rounded-xl text-sm outline-none transition-all duration-200 cursor-pointer
+                    ${isDark
+                      ? 'bg-white/[0.04] text-gray-200 border border-white/[0.06] focus:border-akai focus:ring-1 focus:ring-akai'
+                      : 'bg-gray-50 text-gray-800 border border-gray-200 focus:border-akai focus:ring-1 focus:ring-akai'
+                    }
+                  `}
+                >
+                  <option value="" disabled>Chọn Event Admin...</option>
+                  {eventAdminsList
+                    .filter(admin => {
+                      // Only show admins with 0 managed events, OR admins already managing THIS specific event
+                      if (!admin.managedEventIds || admin.managedEventIds.length === 0) return true;
+                      return admin.managedEventIds.some((m: any) => 
+                        m === assignModal.eventId || m._id === assignModal.eventId || m.id === assignModal.eventId
+                      );
+                    })
+                    .map(admin => (
+                    <option key={admin._id} value={admin.email}>
+                      {admin.name} ({admin.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Sự kiện này sẽ được gán cho Event Admin đã chọn. Nếu bạn chưa có tài khoản Event Admin, hãy tạo trong mục "Tài khoản Event Admin".
+              </p>
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={handleAssignEventAdmin}
+                disabled={assigning || !assignEmail.trim()}
+                className="flex-1 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all disabled:opacity-40"
+              >
+                {assigning ? 'Đang xử lý...' : 'Xác nhận gán'}
+              </button>
+              <button
+                onClick={() => setAssignModal(null)}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${isDark ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

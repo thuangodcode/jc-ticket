@@ -648,3 +648,131 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
   }
 };
 
+
+/**
+ * POST /api/auth/create-event-admin (super admin only)
+ */
+export const createEventAdmin = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin.' });
+    }
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Email đã tồn tại trong hệ thống.' });
+    }
+    const newUser = await User.create({
+      name,
+      email,
+      password,
+      role: 'event_admin',
+      isVerified: true, // Auto verified
+      managedEventIds: [],
+    });
+    return res.status(201).json({
+      success: true,
+      message: 'Tạo tài khoản Event Admin thành công.',
+      data: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Lỗi server.', error: error.message });
+  }
+};
+
+/**
+ * GET /api/auth/event-admins (super admin only)
+ */
+export const getEventAdmins = async (_req: AuthRequest, res: Response) => {
+  try {
+    const admins = await User.find({ role: 'event_admin' }).select('-password -__v').populate('managedEventIds', 'title');
+    return res.status(200).json({ success: true, data: admins });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Lỗi server.', error: error.message });
+  }
+};
+
+/**
+ * POST /api/auth/assign-event-admin (super admin only)
+ */
+export const assignEventAdmin = async (req: AuthRequest, res: Response) => {
+  try {
+    const { email, eventIds } = req.body;
+    if (!email || !eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Email and eventIds (array) are required.' });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found with this email.' });
+    }
+    if (user.role === 'admin') {
+      return res.status(400).json({ success: false, message: 'Cannot assign event_admin role to a super admin.' });
+    }
+    if (eventIds.length > 1) {
+      return res.status(400).json({ success: false, message: 'Mỗi Event Admin chỉ được quản lý tối đa 1 sự kiện cùng lúc.' });
+    }
+    if (user.managedEventIds && user.managedEventIds.length > 0) {
+      const existingIdStr = (user.managedEventIds || [])[0]?.toString();
+      if (existingIdStr !== eventIds[0]) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tài khoản này đã được gán cho một sự kiện khác. Mỗi Event Admin chỉ được quản lý 1 sự kiện.',
+        });
+      }
+    }
+    
+    // Auto-revoke this event from any other event_admin to ensure 1 event -> 1 admin
+    const eventObjId = new (require('mongoose').Types.ObjectId)(eventIds[0]);
+    await User.updateMany(
+      { role: 'event_admin', managedEventIds: eventObjId },
+      { $pull: { managedEventIds: eventObjId } }
+    );
+
+    user.role = 'event_admin';
+    user.managedEventIds = [eventObjId]; // Override entirely since each admin gets max 1 event
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: `User ${user.name} has been assigned as event admin.`,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        managedEventIds: user.managedEventIds?.map((id: any) => id.toString()),
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Failed to assign event admin.', error: error.message });
+  }
+};
+
+/**
+ * POST /api/auth/revoke-event-admin (super admin only)
+ */
+export const revokeEventAdmin = async (req: AuthRequest, res: Response) => {
+  try {
+    const { email, eventId } = req.body;
+    if (!email || !eventId) {
+      return res.status(400).json({ success: false, message: 'Email and eventId are required.' });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    user.managedEventIds = (user.managedEventIds || []).filter((id: any) => id.toString() !== eventId);
+    if (user.managedEventIds.length === 0) {
+      // Optional: keep them as event_admin but with no events, or downgrade them
+      // user.role = 'user'; 
+    }
+    await user.save();
+    return res.status(200).json({ success: true, message: 'Đã thu hồi quyền thành công.' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Failed to revoke.', error: error.message });
+  }
+};

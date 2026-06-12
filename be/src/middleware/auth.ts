@@ -9,6 +9,7 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     role: string;
+    managedEventIds?: string[];
   };
 }
 
@@ -16,7 +17,7 @@ export interface AuthRequest extends Request {
  * Protect middleware - Verify JWT token from httpOnly cookie
  * Used to protect routes that require authentication
  */
-export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     // Get token from httpOnly cookie or Authorization header
     let token = req.cookies?.accessToken;
@@ -35,11 +36,15 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
 
+    const User = require('../models/User').User;
+    const user = await User.findById(decoded.id);
+
     // Attach user info to request
     req.user = {
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
+      managedEventIds: user?.managedEventIds?.map((id: any) => id.toString()) || [],
     };
 
     return next();
@@ -63,10 +68,25 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
  * Must be used after protect middleware
  */
 export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'admin') {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'event_admin') {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Admin privileges required.',
+    });
+  }
+
+  return next();
+};
+
+/**
+ * Super Admin middleware - Check if user is the main admin (not event_admin)
+ * Must be used after protect middleware
+ */
+export const superAdminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Super Admin privileges required.',
     });
   }
 
@@ -78,7 +98,7 @@ export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) =
  * Must be used after protect middleware
  */
 export const staffOrAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'admin' && req.user?.role !== 'staff') {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'event_admin' && req.user?.role !== 'staff') {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Staff or Admin privileges required.',

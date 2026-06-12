@@ -10,8 +10,12 @@ import {
   getCurrentUser,
   updateProfile,
   changePassword,
+  assignEventAdmin,
+  revokeEventAdmin,
+  getEventAdmins,
+  createEventAdmin,
 } from '../controllers/auth.controller';
-import { protect } from '../middleware/auth';
+import { protect, superAdminOnly } from '../middleware/auth';
 import {
   loginLimiter,
   registerLimiter,
@@ -99,5 +103,13 @@ router.put('/profile', protect, updateProfile);
  * Change current user password - requires authentication
  */
 router.put('/change-password', protect, changePassword);
+
+/**
+ * Event Admin Management Routes (super admin only)
+ */
+router.post('/create-event-admin', protect, superAdminOnly, createEventAdmin);
+router.post('/assign-event-admin', protect, superAdminOnly, assignEventAdmin);
+router.post('/revoke-event-admin', protect, superAdminOnly, revokeEventAdmin);
+router.get('/event-admins', protect, superAdminOnly, getEventAdmins);
 
 export default router;

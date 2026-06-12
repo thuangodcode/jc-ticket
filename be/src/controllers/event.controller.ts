@@ -177,6 +177,14 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
  */
 export const updateEvent = async (req: AuthRequest, res: Response) => {
   try {
+    // Event admin can only update their managed events
+    if (req.user?.role === 'event_admin') {
+      const managedIds = req.user.managedEventIds || [];
+      if (!req.params.id || !managedIds.includes(req.params.id as string)) {
+        return res.status(403).json({ success: false, message: 'You can only edit events assigned to you.' });
+      }
+    }
+
     const updateData = { ...req.body };
 
     if (Array.isArray(updateData.ticketTypes) && updateData.ticketTypes.length > 0) {

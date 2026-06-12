@@ -187,6 +187,13 @@ export const getAllBookings = async (req: AuthRequest, res: Response) => {
     const filter: any = {};
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+    // Event admin: scope to their managed events
+    if (req.user?.role === 'event_admin') {
+      const managedIds = req.user.managedEventIds || [];
+      filter.eventId = { $in: managedIds };
+    }
+
     if (search) {
       filter.$or = [
         { bookingCode: { $regex: search, $options: 'i' } },
@@ -231,6 +238,15 @@ export const adminConfirmBookingPayment = async (req: AuthRequest, res: Response
       return res.status(400).json({ success: false, message: 'Invalid booking ID' });
     }
 
+    // Event admin: verify booking belongs to their event
+    if (req.user?.role === 'event_admin') {
+      const booking = await Booking.findById(bookingId);
+      const managedIds = req.user.managedEventIds || [];
+      if (!booking || !managedIds.includes(booking.eventId.toString())) {
+        return res.status(403).json({ success: false, message: 'You can only manage bookings for your assigned events.' });
+      }
+    }
+
     const { booking, tickets, alreadyConfirmed } = await confirmBookingAndIssueTickets({
       bookingId,
       paymentMethod: 'payos',
@@ -267,9 +283,18 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
     }
 
     // Check ownership or admin
-    if (booking.userId.toString() !== req.user?.id && req.user?.role !== 'admin') {
+    if (booking.userId.toString() !== req.user?.id && req.user?.role !== 'admin' && req.user?.role !== 'event_admin') {
       await session.abortTransaction();
       return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Event admin: verify booking belongs to their event
+    if (req.user?.role === 'event_admin') {
+      const managedIds = req.user.managedEventIds || [];
+      if (!managedIds.includes(booking.eventId.toString())) {
+        await session.abortTransaction();
+        return res.status(403).json({ success: false, message: 'You can only manage bookings for your assigned events.' });
+      }
     }
 
     if (booking.status === 'cancelled') {
@@ -318,9 +343,13 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
  * GET /api/bookings/stats (admin only)
  * Thống kê tổng quan cho admin dashboard
  */
-export const getBookingStats = async (_req: AuthRequest, res: Response) => {
+export const getBookingStats = async (req: AuthRequest, res: Response) => {
   try {
-    void _req;
+    // Event admin scope filter
+    const isEventAdmin = req.user?.role === 'event_admin';
+    const managedIds = req.user?.managedEventIds || [];
+    const scopeFilter: any = isEventAdmin ? { eventId: { $in: managedIds.map((id: string) => new (require('mongoose').Types.ObjectId)(id)) } } : {};
+
     const [
       totalBookings,
       pendingBookings,
@@ -328,12 +357,12 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
       cancelledBookings,
       revenueResult,
     ] = await Promise.all([
-      Booking.countDocuments(),
-      Booking.countDocuments({ paymentStatus: 'pending' }),
-      Booking.countDocuments({ paymentStatus: 'successful' }),
-      Booking.countDocuments({ status: 'cancelled' }),
+      Booking.countDocuments(scopeFilter),
+      Booking.countDocuments({ paymentStatus: 'pending', ...scopeFilter }),
+      Booking.countDocuments({ paymentStatus: 'successful', ...scopeFilter }),
+      Booking.countDocuments({ status: 'cancelled', ...scopeFilter }),
       Booking.aggregate([
-        { $match: { paymentStatus: 'successful' } },
+        { $match: { paymentStatus: 'successful', ...scopeFilter } },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } },
       ]),
     ]);
@@ -352,11 +381,11 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
       curConfirmed,
       curRevenueResult
     ] = await Promise.all([
-      Booking.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-      Booking.countDocuments({ paymentStatus: 'pending', createdAt: { $gte: thirtyDaysAgo } }),
-      Booking.countDocuments({ paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo } }),
+      Booking.countDocuments({ createdAt: { $gte: thirtyDaysAgo }, ...scopeFilter }),
+      Booking.countDocuments({ paymentStatus: 'pending', createdAt: { $gte: thirtyDaysAgo }, ...scopeFilter }),
+      Booking.countDocuments({ paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo }, ...scopeFilter }),
       Booking.aggregate([
-        { $match: { paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo } } },
+        { $match: { paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo }, ...scopeFilter } },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } }
       ])
     ]);
@@ -369,11 +398,11 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
       prevConfirmed,
       prevRevenueResult
     ] = await Promise.all([
-      Booking.countDocuments({ createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
-      Booking.countDocuments({ paymentStatus: 'pending', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
-      Booking.countDocuments({ paymentStatus: 'successful', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Booking.countDocuments({ createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }, ...scopeFilter }),
+      Booking.countDocuments({ paymentStatus: 'pending', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }, ...scopeFilter }),
+      Booking.countDocuments({ paymentStatus: 'successful', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }, ...scopeFilter }),
       Booking.aggregate([
-        { $match: { paymentStatus: 'successful', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+        { $match: { paymentStatus: 'successful', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }, ...scopeFilter } },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } }
       ])
     ]);
@@ -401,7 +430,8 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
     const dailyStatsRaw = await Booking.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOf7DaysAgo }
+          createdAt: { $gte: startOf7DaysAgo },
+          ...scopeFilter,
         }
       },
       {
@@ -442,7 +472,7 @@ export const getBookingStats = async (_req: AuthRequest, res: Response) => {
 
     // --- Top 5 Events by Revenue & Ticket Sales ---
     const eventStatsRaw = await Booking.aggregate([
-      { $match: { paymentStatus: 'successful' } },
+      { $match: { paymentStatus: 'successful', ...scopeFilter } },
       {
         $group: {
           _id: '$eventId',

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import bcrypt from 'bcrypt';
 
 /**
@@ -10,7 +10,8 @@ export interface IUser extends Document {
   phone?: string;
   password: string;
   avatar?: string;
-  role: 'user' | 'admin' | 'staff';
+  role: 'user' | 'admin' | 'event_admin' | 'staff';
+  managedEventIds: Types.ObjectId[];
   isVerified: boolean;
 verificationOTP?: string | undefined;
 verificationOTPExpires?: Date | undefined;
@@ -59,8 +60,12 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['user', 'admin', 'staff'],
+      enum: ['user', 'admin', 'event_admin', 'staff'],
       default: 'user',
+    },
+    managedEventIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Event' }],
+      default: [],
     },
     isVerified: {
       type: Boolean,

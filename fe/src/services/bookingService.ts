@@ -28,7 +28,7 @@ export const bookingService = {
   },
 
   /** Lấy tất cả bookings (admin) */
-  getAllBookings: async (params?: { status?: string; paymentStatus?: string; page?: number }) => {
+  getAllBookings: async (params?: { status?: string; paymentStatus?: string; page?: number; search?: string; eventId?: string }) => {
     const res = await api.get('/api/bookings', { params });
     return res.data;
   },
