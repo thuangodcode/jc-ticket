@@ -12,7 +12,7 @@ export interface User {
   email: string;
   avatar?: string;
   role: 'user' | 'admin' | 'event_admin' | 'staff';
-  managedEventIds: string[];
+  managedEventIds?: string[];
   isVerified: boolean;
   createdAt: string;
 }

@@ -23,7 +23,7 @@ export const initSocket = (server: any) => {
   });
 
   // Middleware xác thực token JWT khi kết nối socket
-  io.use(async (socket: any, next) => {
+  io.use(async (socket: any, next: any) => {
     try {
       let token = socket.handshake.auth?.token;
 

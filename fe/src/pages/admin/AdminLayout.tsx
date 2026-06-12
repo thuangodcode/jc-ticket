@@ -74,7 +74,7 @@ export default function AdminLayout() {
       const fetchNames = async () => {
         try {
           const names: string[] = [];
-          for (const id of user.managedEventIds) {
+          for (const id of user.managedEventIds || []) {
             const res = await eventService.getEventById(id);
             if (res.data?.title) names.push(res.data.title);
           }
