@@ -5,5 +5,5 @@ import AIChatPanel from '../AIChatPanel';
  * Displays the AI Assistant inline on the Admin Dashboard, defaulting to the Admin Analysis tab.
  */
 export default function AdminAIPanel() {
-  return <AIChatPanel isInline={true} defaultTab="admin" />;
+  return <AIChatPanel isInline={true} mode="admin" defaultTab="admin" />;
 }

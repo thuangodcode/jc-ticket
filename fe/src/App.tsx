@@ -4,6 +4,7 @@ import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthModalProvider } from './contexts/AuthModalContext';
 import { UserAuthProvider } from './contexts/UserAuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 import { useUserAuth } from './contexts/useUserAuth';
 const AuthModal = lazy(() => import('./components/AuthModal'));
 const UserAIChat = lazy(() => import('./components/UserAIChat'));
@@ -22,6 +23,7 @@ const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
 const MyTicketsPage = lazy(() => import('./pages/MyTicketsPage'));
 const TicketDetailPage = lazy(() => import('./pages/TicketDetailPage'));
 const VerifyTicketPage = lazy(() => import('./pages/VerifyTicketPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 // Admin Pages
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
@@ -30,7 +32,9 @@ const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
 const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
 const AdminEventFormPage = lazy(() => import('./pages/admin/AdminEventFormPage'));
+const AdminEventAdmins = lazy(() => import('./pages/admin/AdminEventAdmins'));
 const AdminScanPage = lazy(() => import('./pages/admin/AdminScanPage'));
+const AdminSupportPage = lazy(() => import('./pages/admin/AdminSupportPage'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -103,9 +107,11 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff')) {
+    if (!isLoading && isAuthenticated && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff') && !location.pathname.startsWith('/event-admin')) {
       if (user?.role === 'admin') {
         navigate('/admin');
+      } else if (user?.role === 'event_admin') {
+        navigate('/event-admin');
       } else if (user?.role === 'staff') {
         navigate('/staff/check-in');
       }
@@ -140,6 +146,7 @@ function AppContent() {
           <Route path="/my-tickets" element={<MyTicketsPage />} />
           <Route path="/my-tickets/:ticketCode" element={<TicketDetailPage />} />
           <Route path="/verify-ticket/:ticketCode" element={<VerifyTicketPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
@@ -149,16 +156,29 @@ function AppContent() {
             <Route path="events" element={<AdminEvents />} />
             <Route path="events/create" element={<AdminEventFormPage />} />
             <Route path="events/edit/:id" element={<AdminEventFormPage />} />
+            <Route path="support" element={<AdminSupportPage />} />
+            <Route path="event-admins" element={<AdminEventAdmins />} />
+          </Route>
+
+          {/* Event Admin Routes */}
+          <Route path="/event-admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="tickets" element={<AdminTickets />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="events/edit/:id" element={<AdminEventFormPage />} />
+            <Route path="scan" element={<AdminScanPage />} />
           </Route>
 
           {/* Staff Routes */}
           <Route path="/staff" element={<AdminLayout />}>
             <Route path="check-in" element={<AdminScanPage />} />
+            <Route path="support" element={<AdminSupportPage />} />
           </Route>
         </Routes>
         <AuthModal />
         {/* User AI Chat Widget — only on non-admin/staff pages */}
-        {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff') && (
+        {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff') && !location.pathname.startsWith('/event-admin') && (
           <UserAIChat />
         )}
       </Suspense>
@@ -170,9 +190,11 @@ function App() {
   return (
     <ThemeProvider>
       <UserAuthProvider>
-        <AuthModalProvider>
-          <AppContent />
-        </AuthModalProvider>
+        <SocketProvider>
+          <AuthModalProvider>
+            <AppContent />
+          </AuthModalProvider>
+        </SocketProvider>
       </UserAuthProvider>
     </ThemeProvider>
   );

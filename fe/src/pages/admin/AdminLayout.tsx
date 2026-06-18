@@ -2,18 +2,43 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Ticket, CalendarDays,
-  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode
+  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode, MessageSquare, Users
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
 import { motion, AnimatePresence } from 'framer-motion';
+import { eventService } from '../../services/eventService';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: any;
+  label: string;
+  end?: boolean;
+}
+
+/** Navigation items for the main admin */
+const adminNavItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/staff/check-in', icon: QrCode, label: 'Quét vé Check-in' },
   { to: '/admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { to: '/admin/tickets', icon: Ticket, label: 'Vé phát hành' },
   { to: '/admin/events', icon: CalendarDays, label: 'Sự kiện' },
+  { to: '/admin/support', icon: MessageSquare, label: 'Hỗ trợ khách hàng' },
+  { to: '/admin/event-admins', icon: Users, label: 'Tài khoản Event Admin' },
+];
+
+/** Navigation items for event_admin */
+const eventAdminNavItems: NavItem[] = [
+  { to: '/event-admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/event-admin/scan', icon: QrCode, label: 'Quét vé Check-in' },
+  { to: '/event-admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
+  { to: '/event-admin/tickets', icon: Ticket, label: 'Vé phát hành' },
+  { to: '/event-admin/events', icon: CalendarDays, label: 'Sự kiện' },
+];
+
+/** Navigation items for staff */
+const staffNavItems: NavItem[] = [
+  { to: '/staff/check-in', icon: QrCode, label: 'Quét vé Check-in' },
+  { to: '/staff/support', icon: MessageSquare, label: 'Hỗ trợ khách hàng' },
 ];
 
 export default function AdminLayout() {
@@ -24,18 +49,41 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [managedEventNames, setManagedEventNames] = useState<string[]>([]);
 
   const isStaff = user?.role === 'staff';
-  const filteredNavItems = navItems.filter(item => {
-    if (isStaff) {
-      return item.to === '/staff/check-in';
-    }
-    return item.to !== '/staff/check-in';
-  });
+  const isEventAdmin = user?.role === 'event_admin';
 
+  // Determine nav items based on role
+  const filteredNavItems = isStaff
+    ? staffNavItems
+    : isEventAdmin
+      ? eventAdminNavItems
+      : adminNavItems;
+
+  // Check if user can access the current route
   const isCurrentRouteAllowed = isStaff
-    ? location.pathname === '/staff/check-in'
-    : location.pathname !== '/staff/check-in';
+    ? location.pathname === '/staff/check-in' || location.pathname === '/staff/support'
+    : isEventAdmin
+      ? location.pathname.startsWith('/event-admin')
+      : !location.pathname.startsWith('/staff/check-in') && !location.pathname.startsWith('/staff/support');
+
+  // Fetch managed event names for event_admin
+  useEffect(() => {
+    if (isEventAdmin && user?.managedEventIds?.length) {
+      const fetchNames = async () => {
+        try {
+          const names: string[] = [];
+          for (const id of user.managedEventIds || []) {
+            const res = await eventService.getEventById(id);
+            if (res.data?.title) names.push(res.data.title);
+          }
+          setManagedEventNames(names);
+        } catch (err) { console.error(err); }
+      };
+      fetchNames();
+    }
+  }, [isEventAdmin, user?.managedEventIds]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -50,7 +98,7 @@ export default function AdminLayout() {
     );
   }
 
-  if (user?.role !== 'admin' && user?.role !== 'staff') {
+  if (user?.role !== 'admin' && user?.role !== 'event_admin' && user?.role !== 'staff') {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0c0f1a] text-white' : 'bg-gray-50 text-ink'}`}>
         <motion.div
@@ -77,14 +125,15 @@ export default function AdminLayout() {
   // Page title from route
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/admin') return 'Dashboard';
+    if (path === '/admin' || path === '/event-admin') return 'Dashboard';
     if (path.includes('/scan') || path.includes('/check-in')) return 'Quét vé Check-in';
+    if (path.includes('/support')) return 'Hỗ trợ trực tuyến';
     if (path.includes('/orders')) return 'Quản lý đơn hàng';
     if (path.includes('/tickets')) return 'Vé đã phát hành';
     if (path.includes('/events/create')) return 'Tạo sự kiện mới';
     if (path.includes('/events/edit')) return 'Chỉnh sửa sự kiện';
     if (path.includes('/events')) return 'Quản lý sự kiện';
-    return isStaff ? 'Staff' : 'Admin';
+    return isStaff ? 'Staff' : isEventAdmin ? 'Event Admin' : 'Admin';
   };
 
   return (
@@ -111,8 +160,13 @@ export default function AdminLayout() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden">
               <p className="font-bold text-sm tracking-tight">JC-Ticket</p>
               <p className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                {isStaff ? 'Staff Panel' : 'Admin Panel'}
+                {isStaff ? 'Staff Panel' : isEventAdmin ? 'Event Admin' : 'Admin Panel'}
               </p>
+              {isEventAdmin && managedEventNames.length > 0 && (
+                <p className={`text-[9px] truncate max-w-[140px] ${isDark ? 'text-akai/70' : 'text-akai/80'}`} title={managedEventNames.join(', ')}>
+                  📋 {managedEventNames.length > 1 ? `${managedEventNames.length} sự kiện` : managedEventNames[0]}
+                </p>
+              )}
             </motion.div>
           )}
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-1.5 rounded-lg hover:bg-white/10">
@@ -252,7 +306,7 @@ export default function AdminLayout() {
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Tài khoản</p>
                         <p className="text-sm font-semibold truncate mt-0.5">{user?.name}</p>
                         <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-akai/10 text-akai">
-                          {user?.role === 'admin' ? 'Administrator' : 'Staff'}
+                          {user?.role === 'admin' ? 'Administrator' : user?.role === 'event_admin' ? 'Event Admin' : 'Staff'}
                         </span>
                       </div>
 
@@ -293,10 +347,10 @@ export default function AdminLayout() {
               <p className={`text-xs max-w-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {isStaff
                   ? 'Tài khoản của bạn thuộc vai trò Nhân viên (Staff), chỉ được phép truy cập và sử dụng chức năng quét check-in vé.'
-                  : 'Tài khoản của bạn thuộc vai trò Admin. Chức năng quét check-in vé bằng camera chỉ dành riêng cho vai trò Nhân viên (Staff).'}
+                  : 'Bạn không có quyền truy cập trang này.'}
               </p>
               <button
-                onClick={() => navigate(isStaff ? '/staff/check-in' : '/admin')}
+                onClick={() => navigate(isStaff ? '/staff/check-in' : isEventAdmin ? '/event-admin' : '/admin')}
                 className="px-6 py-2.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-xs hover:shadow-lg transition-all"
               >
                 {isStaff ? 'Đến trang Quét vé Check-in' : 'Quay lại Dashboard'}

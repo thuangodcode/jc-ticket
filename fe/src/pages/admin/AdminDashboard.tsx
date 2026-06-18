@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
 import { bookingService } from '../../services/bookingService';
+import { useUserAuth } from '../../contexts/useUserAuth';
 import AdminAIPanel from '../../components/admin/AdminAIPanel';
 
 const fadeUp = {
@@ -21,6 +22,9 @@ const fadeUp = {
 export default function AdminDashboard() {
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const { user } = useUserAuth();
+  const isEventAdmin = user?.role === 'event_admin';
+  const routePrefix = isEventAdmin ? '/event-admin' : '/admin';
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,10 +120,13 @@ export default function AdminDashboard() {
               {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
             <h1 className="text-2xl md:text-3xl font-bold mt-1 bg-gradient-to-r from-akai to-sakura-dark bg-clip-text text-transparent">
-              Xin chào, Admin! 👋
+              Xin chào{isEventAdmin ? ', Event Admin' : ', Admin'}! 👋
             </h1>
             <p className={`mt-2 text-sm max-w-lg ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              Tổng quan hoạt động kinh doanh hôm nay. Theo dõi đơn hàng, sự kiện và vé một cách dễ dàng.
+              {isEventAdmin
+                ? 'Tổng quan hoạt động của các sự kiện bạn đang quản lý.'
+                : 'Tổng quan hoạt động kinh doanh hôm nay. Theo dõi đơn hàng, sự kiện và vé một cách dễ dàng.'
+              }
             </p>
           </div>
         </div>
@@ -254,10 +261,10 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold mb-4">Thao tác nhanh</h3>
             <div className="space-y-2.5">
               {[
-                { icon: CalendarDays, label: 'Tạo sự kiện mới', color: 'from-blue-500 to-indigo-600', path: '/admin/events/create' },
-                { icon: ShoppingCart, label: 'Xem đơn hàng', color: 'from-emerald-500 to-teal-600', path: '/admin/orders' },
-                { icon: Ticket, label: 'Quản lý vé', color: 'from-violet-500 to-purple-600', path: '/admin/tickets' },
-                { icon: Users, label: 'Sự kiện hoạt động', color: 'from-amber-500 to-orange-600', path: '/admin/events' },
+                ...(!isEventAdmin ? [{ icon: CalendarDays, label: 'Tạo sự kiện mới', color: 'from-blue-500 to-indigo-600', path: `${routePrefix}/events/create` }] : []),
+                { icon: ShoppingCart, label: 'Xem đơn hàng', color: 'from-emerald-500 to-teal-600', path: `${routePrefix}/orders` },
+                { icon: Ticket, label: 'Quản lý vé', color: 'from-violet-500 to-purple-600', path: `${routePrefix}/tickets` },
+                { icon: Users, label: 'Sự kiện hoạt động', color: 'from-amber-500 to-orange-600', path: `${routePrefix}/events` },
               ].map((action) => (
                 <button
                   key={action.label}
@@ -288,7 +295,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-inherit">
               <h3 className="text-sm font-semibold">Đơn hàng gần đây</h3>
               <button
-                onClick={() => navigate('/admin/orders')}
+                onClick={() => navigate(`${routePrefix}/orders`)}
                 className="text-xs text-akai font-semibold hover:text-sakura-dark transition-colors flex items-center gap-1"
               >
                 Xem tất cả <ArrowUpRight size={12} />
@@ -322,7 +329,7 @@ export default function AdminDashboard() {
                       return (
                         <tr
                           key={order._id}
-                          onClick={() => navigate('/admin/orders')}
+                          onClick={() => navigate(`${routePrefix}/orders`)}
                           className={`
                             border-b cursor-pointer transition-colors
                             ${isDark

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getEvents, getEventById, createEvent, updateEvent, deleteEvent } from '../controllers/event.controller';
-import { protect, adminOnly } from '../middleware/auth';
+import { protect, adminOnly, superAdminOnly } from '../middleware/auth';
 
 const router = Router();
 
@@ -14,9 +14,9 @@ const router = Router();
 router.get('/', getEvents);
 router.get('/:id', getEventById);
 
-// Admin only
-router.post('/', protect, adminOnly, createEvent);
+// Admin only (event_admin can update their own events)
+router.post('/', protect, superAdminOnly, createEvent);
 router.put('/:id', protect, adminOnly, updateEvent);
-router.delete('/:id', protect, adminOnly, deleteEvent);
+router.delete('/:id', protect, superAdminOnly, deleteEvent);
 
 export default router;

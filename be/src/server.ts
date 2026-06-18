@@ -1,4 +1,13 @@
 import './config/loadEnv';
+import dns from 'dns';
+
+// Force Node to use Google DNS to bypass local SRV lookup ECONNREFUSED issues on Windows
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (e) {
+  console.debug('Failed to set custom DNS servers:', e);
+}
+
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -12,13 +21,19 @@ import bookingRoutes from './routes/booking.routes';
 import ticketRoutes from './routes/ticket.routes';
 import paymentRoutes from './routes/payment.routes';
 import uploadRoutes from './routes/upload';
+import http from 'http';
 import aiRoutes from './routes/ai.routes';
+import newsletterRoutes from './routes/newsletter.routes';
+import chatRoutes from './routes/chat.routes';
+import { initSocket } from './utils/socket';
 import { globalErrorHandler } from './middleware/auth';
 import { Booking } from './models/Booking';
 import { Event } from './models/Event';
 import { Ticket } from './models/Ticket';
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
 const PORT = process.env.PORT || 5000;
 
 // Trust proxy - Required for Render.com and other reverse proxies
@@ -144,6 +159,8 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404 Handler
 app.use((_req, res) => {
@@ -156,7 +173,7 @@ app.use((_req, res) => {
 // Global Error Handler
 app.use(globalErrorHandler);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 API Routes: /api/auth, /api/events, /api/bookings, /api/tickets, /api/payment`);

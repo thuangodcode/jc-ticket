@@ -5,7 +5,37 @@ import { Event } from '../models/Event';
 import { Booking } from '../models/Booking';
 import { Ticket } from '../models/Ticket';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+type GeminiKeyResolution = {
+  apiKey: string | null;
+  error: string | null;
+};
+
+function resolveGeminiApiKey(): GeminiKeyResolution {
+  const raw = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+  if (!raw) {
+    return {
+      apiKey: null,
+      error: 'Missing GEMINI_API_KEY (or GOOGLE_API_KEY).',
+    };
+  }
+
+  const normalized = raw.replace(/^Bearer\s+/i, '').trim();
+
+  // Reject only obvious OAuth access token formats.
+  // AI Studio API keys can have multiple formats over time (including AQ.*),
+  // so avoid strict prefix validation here.
+  if (/^(ya29\.|1\/\/)/.test(normalized)) {
+    return {
+      apiKey: null,
+      error: 'Invalid Gemini credential type: expected API key from Google AI Studio, but received OAuth/Access token.',
+    };
+  }
+
+  return {
+    apiKey: normalized,
+    error: null,
+  };
+}
 
 // ─────────────────────────────────────────────
 // Helper: format VND currency
@@ -350,12 +380,14 @@ async function executeAdminTool(name: string, args: any): Promise<any> {
 // Core Gemini chat with function calling loop
 // ─────────────────────────────────────────────
 async function runGeminiChat(
+  apiKey: string,
   systemPrompt: string,
   tools: Tool[],
   history: { role: 'user' | 'model'; parts: { text: string }[] }[],
   userMessage: string,
   toolExecutor: (name: string, args: any) => Promise<any>
 ): Promise<string> {
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: 'gemini-flash-latest',
     systemInstruction: systemPrompt,
@@ -400,13 +432,18 @@ async function runGeminiChat(
 export const userChat = async (req: AuthRequest, res: Response) => {
   try {
     const { message, history = [] } = req.body;
+    const geminiKey = resolveGeminiApiKey();
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Message is required.' });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(503).json({ success: false, message: 'AI service is not configured.' });
+    if (!geminiKey.apiKey) {
+      console.error('Gemini config error:', geminiKey.error);
+      return res.status(503).json({
+        success: false,
+        message: geminiKey.error || 'AI service is not configured. Use Gemini API key from Google AI Studio.',
+      });
     }
 
     const userId = req.user?.id;
@@ -437,6 +474,7 @@ Thông tin về JC-Ticket:
       }));
 
     const reply = await runGeminiChat(
+      geminiKey.apiKey,
       systemPrompt,
       userToolDefs,
       formattedHistory,
@@ -447,6 +485,12 @@ Thông tin về JC-Ticket:
     return res.json({ success: true, reply });
   } catch (error: any) {
     console.error('User AI chat error:', error);
+    if (error?.status === 401) {
+      return res.status(503).json({
+        success: false,
+        message: 'Gemini authentication failed. Please verify GEMINI_API_KEY is a valid AI Studio API key.',
+      });
+    }
     if (error?.status === 429) {
       return res.status(429).json({ success: false, message: 'AI đang bận, vui lòng thử lại sau vài giây.' });
     }
@@ -460,13 +504,18 @@ Thông tin về JC-Ticket:
 export const adminChat = async (req: AuthRequest, res: Response) => {
   try {
     const { message, history = [] } = req.body;
+    const geminiKey = resolveGeminiApiKey();
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Message is required.' });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(503).json({ success: false, message: 'AI service is not configured.' });
+    if (!geminiKey.apiKey) {
+      console.error('Gemini config error:', geminiKey.error);
+      return res.status(503).json({
+        success: false,
+        message: geminiKey.error || 'AI service is not configured. Use Gemini API key from Google AI Studio.',
+      });
     }
 
     const systemPrompt = `Bạn là JC Admin AI — trợ lý phân tích dữ liệu chuyên nghiệp của hệ thống quản lý JC-Ticket.
@@ -495,6 +544,7 @@ Ví dụ về insights bạn có thể đưa ra:
       }));
 
     const reply = await runGeminiChat(
+      geminiKey.apiKey,
       systemPrompt,
       adminToolDefs,
       formattedHistory,
@@ -505,6 +555,12 @@ Ví dụ về insights bạn có thể đưa ra:
     return res.json({ success: true, reply });
   } catch (error: any) {
     console.error('Admin AI chat error:', error);
+    if (error?.status === 401) {
+      return res.status(503).json({
+        success: false,
+        message: 'Gemini authentication failed. Please verify GEMINI_API_KEY is a valid AI Studio API key.',
+      });
+    }
     if (error?.status === 429) {
       return res.status(429).json({ success: false, message: 'AI đang bận, vui lòng thử lại sau vài giây.' });
     }

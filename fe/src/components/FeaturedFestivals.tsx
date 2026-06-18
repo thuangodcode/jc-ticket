@@ -30,7 +30,7 @@ export const FeaturedFestivals: React.FC<FeaturedFestivalsProps> = ({
     {
       id: '1',
       name: t('festivals.items.1.name'),
-      image: 'https://images.unsplash.com/photo-1545809980-e44ff8b7f02d?w=800&h=500&fit=crop',
+      image: '/cherry-blossom-crowd.jpg',
       description: t('festivals.items.1.description'),
       date: t('festivals.items.1.date'),
       highlight: t('festivals.items.1.highlight'),
@@ -38,7 +38,7 @@ export const FeaturedFestivals: React.FC<FeaturedFestivalsProps> = ({
     {
       id: '2',
       name: t('festivals.items.2.name'),
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=500&fit=crop',
+      image: '/cherry-blossom-park.jpg',
       description: t('festivals.items.2.description'),
       date: t('festivals.items.2.date'),
       highlight: t('festivals.items.2.highlight'),
@@ -46,7 +46,7 @@ export const FeaturedFestivals: React.FC<FeaturedFestivalsProps> = ({
     {
       id: '3',
       name: t('festivals.items.3.name'),
-      image: 'https://images.unsplash.com/photo-1545809983-2c3e0ea20e50?w=800&h=500&fit=crop',
+      image: '/cherry-blossom-kimono.png',
       description: t('festivals.items.3.description'),
       date: t('festivals.items.3.date'),
       highlight: t('festivals.items.3.highlight'),

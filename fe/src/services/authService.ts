@@ -112,6 +112,29 @@ export const getCurrentUserProfile = async () => {
 };
 
 /**
+ * Update user profile
+ */
+export const updateUserProfile = async (data: {
+  name: string;
+  phone?: string;
+  avatar?: string;
+}) => {
+  const response = await authAPI.put('/profile', data);
+  return response.data;
+};
+
+/**
+ * Change user password
+ */
+export const changePassword = async (data: {
+  oldPassword?: string;
+  newPassword?: string;
+}) => {
+  const response = await authAPI.put('/change-password', data);
+  return response.data;
+};
+
+/**
  * Auth Service object - provides clean API for authentication
  * Used by UserAuthContext and components
  */
@@ -139,6 +162,14 @@ export const authService = {
     return getCurrentUserProfile();
   },
 
+  updateProfile: async (name: string, phone?: string, avatar?: string) => {
+    return updateUserProfile({ name, phone, avatar });
+  },
+
+  changePassword: async (oldPassword?: string, newPassword?: string) => {
+    return changePassword({ oldPassword, newPassword });
+  },
+
   // Password reset flow
   forgotPassword: async (email: string) => {
     return forgotPassword({ email });
@@ -150,6 +181,27 @@ export const authService = {
 
   resetPassword: async (email: string, otp: string, newPassword: string) => {
     return resetPasswordService({ email, otp, newPassword });
+  },
+
+  // Event Admin management (super admin only)
+  assignEventAdmin: async (email: string, eventIds: string[]) => {
+    const response = await authAPI.post('/assign-event-admin', { email, eventIds });
+    return response.data;
+  },
+
+  revokeEventAdmin: async (userId: string) => {
+    const response = await authAPI.post('/revoke-event-admin', { userId });
+    return response.data;
+  },
+
+  getEventAdmins: async () => {
+    const response = await authAPI.get('/event-admins');
+    return response.data;
+  },
+
+  createEventAdmin: async (data: any) => {
+    const response = await authAPI.post('/create-event-admin', data);
+    return response.data;
   },
 };
 

@@ -5,5 +5,5 @@ import AIChatPanel from './AIChatPanel';
  * Displays the AI Assistant as a floating bubble at the bottom right.
  */
 export default function UserAIChat() {
-  return <AIChatPanel isInline={false} defaultTab="user" />;
+  return <AIChatPanel isInline={false} mode="user" defaultTab="user" />;
 }

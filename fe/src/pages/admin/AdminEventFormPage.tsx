@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, Trash2, Upload, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useUserAuth } from '../../contexts/useUserAuth';
 import { eventService } from '../../services/eventService';
 import { uploadService } from '../../services/uploadService';
 import LocationAutocomplete, { type LocationResult } from '../../components/LocationAutocomplete';
@@ -28,6 +29,8 @@ export default function AdminEventFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { user } = useUserAuth();
+  const routePrefix = user?.role === 'event_admin' ? '/event-admin' : '/admin';
 
   const DEFAULT_SEATS_PER_ROW = 12;
 
@@ -190,7 +193,7 @@ export default function AdminEventFormPage() {
       } catch (err) {
         toast.error('Lỗi khi lấy thông tin sự kiện');
         console.error(err);
-        navigate('/admin/events');
+        navigate(`${routePrefix}/events`);
       } finally {
         setLoading(false);
       }
@@ -333,7 +336,7 @@ export default function AdminEventFormPage() {
         await eventService.createEvent(payload);
         toast.success('Tạo sự kiện thành công');
       }
-      navigate('/admin/events');
+      navigate(`${routePrefix}/events`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Lỗi khi lưu sự kiện');
       console.error(err);
@@ -358,7 +361,7 @@ export default function AdminEventFormPage() {
     <div className="max-w-3xl w-full mx-auto">
       {/* Breadcrumb / Back Link */}
       <button
-        onClick={() => navigate('/admin/events')}
+        onClick={() => navigate(`${routePrefix}/events`)}
         className="flex items-center gap-2 text-xs font-semibold opacity-60 hover:opacity-100 transition-opacity mb-5"
       >
         <ArrowLeft size={14} /> Quay lại danh sách sự kiện
@@ -773,7 +776,7 @@ export default function AdminEventFormPage() {
 
               <button
                 type="button"
-                onClick={() => navigate('/admin/events')}
+                onClick={() => navigate(`${routePrefix}/events`)}
                 className="px-8 py-3 text-sm font-semibold opacity-60 hover:opacity-100 transition-opacity"
               >
                 Hủy

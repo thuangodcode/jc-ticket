@@ -35,6 +35,16 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* Global pointer cursor for interactive elements */
+button,
+a,
+select,
+input[type="submit"],
+input[type="button"],
+[role="button"] {
+  cursor: pointer !important;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 8px;

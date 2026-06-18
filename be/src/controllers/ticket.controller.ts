@@ -129,6 +129,14 @@ export const markTicketUsed = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
+    // Event admin: verify ticket belongs to their event
+    if (req.user?.role === 'event_admin') {
+      const managedIds = req.user.managedEventIds || [];
+      if (!managedIds.includes(ticket.eventId.toString())) {
+        return res.status(403).json({ success: false, message: 'You can only manage tickets for your assigned events.' });
+      }
+    }
+
     if (ticket.status !== 'active') {
       return res.status(400).json({
         success: false,
@@ -161,6 +169,13 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
     const filter: any = {};
     if (status) filter.status = status;
     if (eventId) filter.eventId = eventId;
+
+    // Event admin: scope to their managed events
+    if (req.user?.role === 'event_admin') {
+      const managedIds = req.user.managedEventIds || [];
+      filter.eventId = eventId ? eventId : { $in: managedIds };
+    }
+
     if (search) {
       filter.$or = [
         { ticketCode: { $regex: search, $options: 'i' } },

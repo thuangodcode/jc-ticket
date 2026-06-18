@@ -17,6 +17,8 @@ export interface UserAuthContextType {
   register: (name: string, phone: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetError: () => void;
+  updateProfile: (name: string, phone?: string, avatar?: string) => Promise<User>;
+  changePassword: (oldPassword?: string, newPassword?: string) => Promise<void>;
 
   // Session recovery
   restoreSession: () => Promise<void>;
@@ -35,6 +37,8 @@ const defaultContextValue: UserAuthContextType = {
   register: async () => {},
   logout: async () => {},
   resetError: () => {},
+  updateProfile: async () => ({} as User),
+  changePassword: async () => {},
   restoreSession: async () => {},
 };
 

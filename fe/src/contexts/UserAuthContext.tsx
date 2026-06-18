@@ -11,7 +11,8 @@ export interface User {
   phone?: string;
   email: string;
   avatar?: string;
-  role: 'user' | 'admin' | 'staff';
+  role: 'user' | 'admin' | 'event_admin' | 'staff';
+  managedEventIds?: string[];
   isVerified: boolean;
   createdAt: string;
 }
@@ -51,6 +52,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
         email: response.data.email || '',
         avatar: response.data.avatar,
         role: response.data.role || 'user',
+        managedEventIds: response.data.managedEventIds || [],
         isVerified: true,
         createdAt: new Date().toISOString(),
       };
@@ -96,9 +98,11 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
       const userData: User = {
         id: response.data.id || '',
         name: response.data.name || '',
+        phone: response.data.phone,
         email: response.data.email || '',
         avatar: response.data.avatar,
         role: response.data.role || 'user',
+        managedEventIds: response.data.managedEventIds || [],
         isVerified: true,
         createdAt: new Date().toISOString(),
       };
@@ -209,6 +213,71 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
   };
 
   /**
+   * Update profile handler
+   */
+  const updateProfile = async (name: string, phone?: string, avatar?: string): Promise<User> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await authService.updateProfile(name, phone, avatar);
+      
+      const userData: User = {
+        id: response.data.id || '',
+        name: response.data.name || '',
+        phone: response.data.phone,
+        email: response.data.email || '',
+        avatar: response.data.avatar,
+        role: response.data.role || 'user',
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      let errorMsg = 'Failed to update profile';
+      if (err instanceof Error) {
+        if ('response' in err && typeof err.response === 'object' && err.response !== null) {
+          const response = err.response as { data?: { message?: string } };
+          errorMsg = response.data?.message || err.message;
+        } else {
+          errorMsg = err.message;
+        }
+      }
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Change password handler
+   */
+  const changePassword = async (oldPassword?: string, newPassword?: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await authService.changePassword(oldPassword, newPassword);
+    } catch (err) {
+      let errorMsg = 'Failed to change password';
+      if (err instanceof Error) {
+        if ('response' in err && typeof err.response === 'object' && err.response !== null) {
+          const response = err.response as { data?: { message?: string } };
+          errorMsg = response.data?.message || err.message;
+        } else {
+          errorMsg = err.message;
+        }
+      }
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
    * Restore session when component mounts (app startup)
    * This runs once on app load to check for existing session
    */
@@ -231,6 +300,7 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
             email: response.data.email || '',
             avatar: response.data.avatar,
             role: response.data.role || 'user',
+            managedEventIds: response.data.managedEventIds || [],
             isVerified: true,
             createdAt: new Date().toISOString(),
           };
@@ -276,6 +346,8 @@ export const UserAuthProvider: React.FC<UserAuthProviderProps> = ({ children }) 
     logout,
     resetError,
     restoreSession,
+    updateProfile,
+    changePassword,
   };
 
   return <UserAuthContext.Provider value={value}>{children}</UserAuthContext.Provider>;
