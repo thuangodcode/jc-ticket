@@ -49,9 +49,15 @@ const LoginModal: React.FC = () => {
         position: 'top-center',
       });
 
-      // Redirect admin to dashboard
-      if (loggedInUser && loggedInUser.role === 'admin') {
-        navigate('/admin');
+      // Redirect admin/staff to dashboard
+      if (loggedInUser) {
+        if (loggedInUser.role === 'admin') {
+          navigate('/admin');
+        } else if (loggedInUser.role === 'event_admin') {
+          navigate('/event-admin');
+        } else if (loggedInUser.role === 'staff') {
+          navigate('/staff/check-in');
+        }
       }
     } catch (err: unknown) {
       console.error('🔐 LoginModal: Login failed:', err);

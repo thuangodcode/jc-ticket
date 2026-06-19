@@ -8,7 +8,7 @@ import {
   cancelBooking,
   getBookingStats,
 } from '../controllers/booking.controller';
-import { protect, adminOnly } from '../middleware/auth';
+import { protect, eventAdminOnly } from '../middleware/auth';
 
 const router = Router();
 
@@ -19,13 +19,13 @@ const router = Router();
 // User routes
 router.post('/', protect, createBooking);
 router.get('/my', protect, getMyBookings);
-router.get('/stats', protect, adminOnly, getBookingStats);
+router.get('/stats', protect, eventAdminOnly, getBookingStats);
 router.get('/:id', protect, getBookingById);
 router.patch('/:id/cancel', protect, cancelBooking);
 
 // Admin routes
-router.get('/', protect, adminOnly, getAllBookings);
-router.patch('/:id/payment/admin-confirm', protect, adminOnly, adminConfirmBookingPayment);
-router.patch('/:id/confirm', protect, adminOnly, adminConfirmBookingPayment);
+router.get('/', protect, eventAdminOnly, getAllBookings);
+router.patch('/:id/payment/admin-confirm', protect, eventAdminOnly, adminConfirmBookingPayment);
+router.patch('/:id/confirm', protect, eventAdminOnly, adminConfirmBookingPayment);
 
 export default router;

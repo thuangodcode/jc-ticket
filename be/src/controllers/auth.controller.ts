@@ -188,6 +188,7 @@ export const verifyOTP = async (req: any, res: Response) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        managedEventIds: user.managedEventIds || [],
       },
     });
   } catch (error: any) {
@@ -263,6 +264,7 @@ export const login = async (req: any, res: Response) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        managedEventIds: user.managedEventIds || [],
       },
     });
   } catch (error: any) {
@@ -524,6 +526,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
         phone: user.phone,
         role: user.role,
         avatar: user.avatar,
+        managedEventIds: user.managedEventIds || [],
       },
     });
   } catch (error: any) {
@@ -583,6 +586,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         phone: user.phone,
         role: user.role,
         avatar: user.avatar,
+        managedEventIds: user.managedEventIds || [],
       },
     });
   } catch (error: any) {
@@ -774,5 +778,222 @@ export const revokeEventAdmin = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, message: 'Đã thu hồi quyền thành công.' });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: 'Failed to revoke.', error: error.message });
+  }
+};
+
+/**
+ * GET /api/auth/users (super admin only)
+ * Lấy danh sách toàn bộ tài khoản có tìm kiếm và bộ lọc
+ */
+export const getAllUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const { role, search, page = '1', limit = '20' } = req.query as Record<string, string>;
+
+    const filter: any = {};
+    if (role) filter.role = role;
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, parseInt(limit));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .select('-password -__v')
+        .populate('managedEventIds', 'title')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      User.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Lỗi server.', error: error.message });
+  }
+};
+
+/**
+ * POST /api/auth/users (super admin only)
+ * Tạo tài khoản mới với vai trò chỉ định
+ */
+export const createUserAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, email, password, role, phone } = req.body;
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin: name, email, password, role.' });
+    }
+
+    const validRoles = ['user', 'admin', 'event_admin', 'staff'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Vai trò không hợp lệ.' });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Email đã tồn tại trong hệ thống.' });
+    }
+
+    const newUser = await User.create({
+      name,
+      email,
+      password,
+      role,
+      phone,
+      isVerified: true,
+      managedEventIds: [],
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Tạo tài khoản ${role} thành công.`,
+      data: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        phone: newUser.phone,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Lỗi server.', error: error.message });
+  }
+};
+
+/**
+ * DELETE /api/auth/users/:id (super admin only)
+ * Xóa tài khoản người dùng
+ */
+export const deleteUserAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Không cho phép tự xóa chính mình
+    if (id === req.user?.id) {
+      return res.status(400).json({ success: false, message: 'Bạn không thể tự xóa tài khoản của chính mình.' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Tài khoản không tồn tại.' });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Xóa tài khoản thành công.',
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Lỗi server.', error: error.message });
+  }
+};
+
+/**
+ * GET /api/auth/system-stats (super admin only)
+ * Thống kê hệ thống dành cho System Admin
+ */
+export const getSystemStats = async (_req: AuthRequest, res: Response) => {
+  try {
+    const TrafficLog = require('../models/TrafficLog').TrafficLog;
+
+    // Tổng số tài khoản đăng ký theo từng vai trò
+    const roleStats = await User.aggregate([
+      { $group: { _id: '$role', count: { $sum: 1 } } }
+    ]);
+
+    const totalAccounts = roleStats.reduce((sum: number, item: any) => sum + item.count, 0);
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    // Thống kê số lượt truy cập (traffic) hàng ngày trong 30 ngày qua
+    const dailyTrafficRaw = await TrafficLog.aggregate([
+      {
+        $match: {
+          timestamp: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$timestamp", timezone: "+07:00" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Thống kê số lượng tài khoản đăng ký hàng ngày trong 30 ngày qua
+    const dailySignupsRaw = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Format kết quả 30 ngày qua (đảm bảo đủ các ngày kể cả khi không có lượt click hay đăng ký)
+    const dailyStats = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const foundTraffic = dailyTrafficRaw.find((item: any) => item._id === dateStr);
+      const foundSignup = dailySignupsRaw.find((item: any) => item._id === dateStr);
+
+      dailyStats.push({
+        date: dateStr,
+        dayLabel: d.toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' }),
+        traffic: foundTraffic ? foundTraffic.count : 0,
+        signups: foundSignup ? foundSignup.count : 0,
+      });
+    }
+
+    // Tính tổng số traffic trong 30 ngày qua
+    const totalTraffic30DaysResult = await TrafficLog.aggregate([
+      { $match: { timestamp: { $gte: thirtyDaysAgo } } },
+      { $count: 'total' }
+    ]);
+    const totalTraffic30Days = totalTraffic30DaysResult[0]?.total || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalAccounts,
+        roleStats,
+        dailyStats,
+        totalTraffic30Days,
+      }
+    });
+  } catch (error: any) {
+    console.error('Get system stats error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server.', error: error.message });
   }
 };

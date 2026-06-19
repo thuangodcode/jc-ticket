@@ -24,10 +24,54 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useUserAuth();
   const isEventAdmin = user?.role === 'event_admin';
+  const isStaff = user?.role === 'staff';
   const routePrefix = isEventAdmin ? '/event-admin' : '/admin';
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Dynamic role theme for UI visual separation
+  const roleTheme = isStaff
+    ? {
+        name: 'Nhân viên',
+        welcomePrefix: 'Nhân viên',
+        accentGradient: 'from-teal-500 to-emerald-600',
+        accentShadow: 'shadow-teal-500/25',
+        accentText: 'text-teal-500',
+        textColor: 'text-teal-500 hover:text-emerald-600',
+        hoverText: 'group-hover:text-teal-500',
+        spinnerBorder: 'border-teal-500',
+        chartColor: '#14b8a6', // Teal
+        bannerGradient: 'from-[#060c0d] to-[#0b1416]',
+        orbGradient: 'from-teal-500/20 to-emerald-500/10',
+      }
+    : isEventAdmin
+      ? {
+          name: 'Organizer',
+          welcomePrefix: 'Event Admin',
+          accentGradient: 'from-orange-500 to-rose-600',
+          accentShadow: 'shadow-orange-500/25',
+          accentText: 'text-orange-500',
+          textColor: 'text-orange-500 hover:text-rose-600',
+          hoverText: 'group-hover:text-orange-500',
+          spinnerBorder: 'border-orange-500',
+          chartColor: '#f97316', // Orange
+          bannerGradient: 'from-[#110e15] to-[#181320]',
+          orbGradient: 'from-orange-500/20 to-rose-500/10',
+        }
+      : {
+          name: 'System Admin',
+          welcomePrefix: 'Admin',
+          accentGradient: 'from-indigo-600 to-violet-600',
+          accentShadow: 'shadow-indigo-500/25',
+          accentText: 'text-indigo-500',
+          textColor: 'text-indigo-600 hover:text-violet-600',
+          hoverText: 'group-hover:text-indigo-500',
+          spinnerBorder: 'border-indigo-600',
+          chartColor: '#6366f1', // Indigo
+          bannerGradient: 'from-[#080a15] to-[#0e1122]',
+          orbGradient: 'from-indigo-500/20 to-purple-500/10',
+        };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -110,17 +154,17 @@ export default function AdminDashboard() {
     <div className="space-y-6 md:space-y-8">
       {/* ── Welcome banner ── */}
       <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
-        <div className={`rounded-2xl p-6 md:p-8 relative overflow-hidden ${isDark ? 'bg-gradient-to-br from-[#1a1f38] to-[#111528]' : 'bg-gradient-to-br from-gray-50 to-white'} border ${isDark ? 'border-white/[0.06]' : 'border-gray-200/60'}`}>
+        <div className={`rounded-2xl p-6 md:p-8 relative overflow-hidden ${isDark ? `bg-gradient-to-br ${roleTheme.bannerGradient}` : 'bg-gradient-to-br from-gray-50 to-white'} border ${isDark ? 'border-white/[0.06]' : 'border-gray-200/60'}`}>
           {/* Decorative gradient orbs */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-akai/20 to-sakura/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+          <div className={`absolute top-0 right-0 w-72 h-72 bg-gradient-to-br ${roleTheme.orbGradient} rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none`} />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-violet-500/10 to-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
 
           <div className="relative">
             <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
-            <h1 className="text-2xl md:text-3xl font-bold mt-1 bg-gradient-to-r from-akai to-sakura-dark bg-clip-text text-transparent">
-              Xin chào{isEventAdmin ? ', Event Admin' : ', Admin'}! 👋
+            <h1 className={`text-2xl md:text-3xl font-bold mt-1 bg-gradient-to-r ${roleTheme.accentGradient} bg-clip-text text-transparent`}>
+              Xin chào, {roleTheme.welcomePrefix}! 👋
             </h1>
             <p className={`mt-2 text-sm max-w-lg ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
               {isEventAdmin
@@ -189,13 +233,13 @@ export default function AdminDashboard() {
                 <AreaChart data={stats.dailyStats} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#DC143C" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#DC143C" stopOpacity={0}/>
+                      <stop offset="5%" stopColor={roleTheme.chartColor} stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor={roleTheme.chartColor} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.05)"} />
                   <XAxis dataKey="dayLabel" stroke={isDark ? "#9CA3AF" : "#4B5563"} />
-                  <YAxis yAxisId="left" stroke="#DC143C" tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} />
+                  <YAxis yAxisId="left" stroke={roleTheme.chartColor} tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} />
                   <YAxis yAxisId="right" orientation="right" stroke="#FF69B4" />
                   <Tooltip
                     contentStyle={{
@@ -205,7 +249,7 @@ export default function AdminDashboard() {
                       color: isDark ? '#f3f4f6' : '#1f2937'
                     }}
                   />
-                  <Area yAxisId="left" type="monotone" dataKey="revenue" name="Doanh thu (₫)" stroke="#DC143C" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
+                  <Area yAxisId="left" type="monotone" dataKey="revenue" name="Doanh thu (₫)" stroke={roleTheme.chartColor} strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
                   <Area yAxisId="right" type="monotone" dataKey="bookings" name="Đơn hàng" stroke="#FF69B4" strokeWidth={2} fill="none" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -240,7 +284,7 @@ export default function AdminDashboard() {
                   />
                   <Bar dataKey="revenue" name="Doanh thu" radius={[0, 4, 4, 0]}>
                     {stats.eventStats.map((_entry: any, index: number) => {
-                      const colors = ['#DC143C', '#FF69B4', '#D4AF37', '#3B82F6', '#10B981'];
+                      const colors = [roleTheme.chartColor, '#FF69B4', '#D4AF37', '#3B82F6', '#10B981'];
                       return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                     })}
                   </Bar>
@@ -282,7 +326,7 @@ export default function AdminDashboard() {
                     <action.icon size={16} />
                   </div>
                   <span className="text-[13px] font-medium flex-1">{action.label}</span>
-                  <ArrowUpRight size={14} className={`${isDark ? 'text-gray-600' : 'text-gray-300'} group-hover:text-akai transition-colors`} />
+                  <ArrowUpRight size={14} className={`${isDark ? 'text-gray-600' : 'text-gray-300'} ${roleTheme.hoverText} transition-colors`} />
                 </button>
               ))}
             </div>
@@ -296,7 +340,7 @@ export default function AdminDashboard() {
               <h3 className="text-sm font-semibold">Đơn hàng gần đây</h3>
               <button
                 onClick={() => navigate(`${routePrefix}/orders`)}
-                className="text-xs text-akai font-semibold hover:text-sakura-dark transition-colors flex items-center gap-1"
+                className={`text-xs ${roleTheme.textColor} font-semibold transition-colors flex items-center gap-1`}
               >
                 Xem tất cả <ArrowUpRight size={12} />
               </button>
@@ -304,7 +348,7 @@ export default function AdminDashboard() {
 
             {loading ? (
               <div className="p-8 flex justify-center">
-                <div className="w-8 h-8 border-3 border-akai border-t-transparent rounded-full animate-spin" />
+                <div className={`w-8 h-8 border-3 ${roleTheme.spinnerBorder} border-t-transparent rounded-full animate-spin`} />
               </div>
             ) : recentOrders.length === 0 ? (
               <div className="p-12 text-center">
@@ -338,7 +382,7 @@ export default function AdminDashboard() {
                             }
                           `}
                         >
-                          <td className="py-3.5 px-5 font-mono font-bold text-akai text-xs">{order.bookingCode}</td>
+                          <td className={`py-3.5 px-5 font-mono font-bold ${roleTheme.accentText} text-xs`}>{order.bookingCode}</td>
                           <td className="py-3.5 px-5">{order.passengerInfo?.name || order.userId?.name || '—'}</td>
                           <td className="py-3.5 px-5 truncate max-w-[180px] hidden md:table-cell">{order.eventId?.title || '—'}</td>
                           <td className="py-3.5 px-5 text-right font-semibold tabular-nums">{order.totalPrice?.toLocaleString('vi-VN')}₫</td>

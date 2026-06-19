@@ -137,24 +137,31 @@ async function toolGetMyTickets(userId: string, args: { limit?: number }) {
 // ─────────────────────────────────────────────
 // Tool: booking stats (ADMIN)
 // ─────────────────────────────────────────────
-async function toolGetBookingStats() {
+async function toolGetBookingStats(currentUser?: any) {
+  const isEventAdmin = currentUser?.role === 'event_admin';
+  const managedIds = currentUser?.managedEventIds || [];
+  const mongoose = require('mongoose');
+  const scopeFilter: any = isEventAdmin
+    ? { eventId: { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) } }
+    : {};
+
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const [total, pending, successful, cancelled, revenueResult, todayBookings, todayRevResult] =
     await Promise.all([
-      Booking.countDocuments(),
-      Booking.countDocuments({ paymentStatus: 'pending' }),
-      Booking.countDocuments({ paymentStatus: 'successful' }),
-      Booking.countDocuments({ status: 'cancelled' }),
+      Booking.countDocuments(scopeFilter),
+      Booking.countDocuments({ paymentStatus: 'pending', ...scopeFilter }),
+      Booking.countDocuments({ paymentStatus: 'successful', ...scopeFilter }),
+      Booking.countDocuments({ status: 'cancelled', ...scopeFilter }),
       Booking.aggregate([
-        { $match: { paymentStatus: 'successful' } },
+        { $match: { paymentStatus: 'successful', ...scopeFilter } },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } },
       ]),
-      Booking.countDocuments({ createdAt: { $gte: today } }),
+      Booking.countDocuments({ createdAt: { $gte: today }, ...scopeFilter }),
       Booking.aggregate([
-        { $match: { paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo } } },
+        { $match: { paymentStatus: 'successful', createdAt: { $gte: thirtyDaysAgo }, ...scopeFilter } },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } },
       ]),
     ]);
@@ -174,13 +181,23 @@ async function toolGetBookingStats() {
 // ─────────────────────────────────────────────
 // Tool: get all bookings with filter (ADMIN)
 // ─────────────────────────────────────────────
-async function toolGetAllBookings(args: {
-  paymentStatus?: string;
-  status?: string;
-  limit?: number;
-  search?: string;
-}) {
-  const filter: any = {};
+async function toolGetAllBookings(
+  args: {
+    paymentStatus?: string;
+    status?: string;
+    limit?: number;
+    search?: string;
+  },
+  currentUser?: any
+) {
+  const isEventAdmin = currentUser?.role === 'event_admin';
+  const managedIds = currentUser?.managedEventIds || [];
+  const mongoose = require('mongoose');
+  const scopeFilter: any = isEventAdmin
+    ? { eventId: { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) } }
+    : {};
+
+  const filter: any = { ...scopeFilter };
   if (args.paymentStatus) filter.paymentStatus = args.paymentStatus;
   if (args.status) filter.status = args.status;
   if (args.search) {
@@ -217,9 +234,16 @@ async function toolGetAllBookings(args: {
 // ─────────────────────────────────────────────
 // Tool: top events by revenue (ADMIN)
 // ─────────────────────────────────────────────
-async function toolGetTopEvents(args: { limit?: number }) {
+async function toolGetTopEvents(args: { limit?: number }, currentUser?: any) {
+  const isEventAdmin = currentUser?.role === 'event_admin';
+  const managedIds = currentUser?.managedEventIds || [];
+  const mongoose = require('mongoose');
+  const scopeFilter: any = isEventAdmin
+    ? { eventId: { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) } }
+    : {};
+
   const eventStatsRaw = await Booking.aggregate([
-    { $match: { paymentStatus: 'successful' } },
+    { $match: { paymentStatus: 'successful', ...scopeFilter } },
     {
       $group: {
         _id: '$eventId',
@@ -253,11 +277,18 @@ async function toolGetTopEvents(args: { limit?: number }) {
 // ─────────────────────────────────────────────
 // Tool: ticket stats (ADMIN)
 // ─────────────────────────────────────────────
-async function toolGetTicketStats() {
+async function toolGetTicketStats(currentUser?: any) {
+  const isEventAdmin = currentUser?.role === 'event_admin';
+  const managedIds = currentUser?.managedEventIds || [];
+  const mongoose = require('mongoose');
+  const scopeFilter: any = isEventAdmin
+    ? { eventId: { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) } }
+    : {};
+
   const [total, used, unused] = await Promise.all([
-    Ticket.countDocuments(),
-    Ticket.countDocuments({ isUsed: true }),
-    Ticket.countDocuments({ isUsed: false }),
+    Ticket.countDocuments(scopeFilter),
+    Ticket.countDocuments({ isUsed: true, ...scopeFilter }),
+    Ticket.countDocuments({ isUsed: false, ...scopeFilter }),
   ]);
 
   return {
@@ -366,12 +397,12 @@ async function executeUserTool(name: string, args: any, userId?: string): Promis
   }
 }
 
-async function executeAdminTool(name: string, args: any): Promise<any> {
+async function executeAdminTool(name: string, args: any, currentUser?: any): Promise<any> {
   switch (name) {
-    case 'getBookingStats': return toolGetBookingStats();
-    case 'getAllBookings': return toolGetAllBookings(args);
-    case 'getTopEvents': return toolGetTopEvents(args);
-    case 'getTicketStats': return toolGetTicketStats();
+    case 'getBookingStats': return toolGetBookingStats(currentUser);
+    case 'getAllBookings': return toolGetAllBookings(args, currentUser);
+    case 'getTopEvents': return toolGetTopEvents(args, currentUser);
+    case 'getTicketStats': return toolGetTicketStats(currentUser);
     default: return { error: `Tool "${name}" không tồn tại.` };
   }
 }
@@ -407,7 +438,7 @@ async function runGeminiChat(
 
     // Execute all tool calls in parallel
     const toolResults = await Promise.all(
-      calls.map(async (call) => {
+      calls.map(async (call: any) => {
         const toolResult = await toolExecutor(call.name, call.args || {});
         return {
           functionResponse: {
@@ -549,7 +580,7 @@ Ví dụ về insights bạn có thể đưa ra:
       adminToolDefs,
       formattedHistory,
       message.trim(),
-      (name, args) => executeAdminTool(name, args)
+      (name, args) => executeAdminTool(name, args, req.user)
     );
 
     return res.json({ success: true, reply });

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Ticket } from '../models/Ticket';
 import { AuthRequest } from '../middleware/auth';
+import mongoose from 'mongoose';
 
 /**
  * Ticket Controller - Quản lý vé điện tử
@@ -42,12 +43,20 @@ export const getTicketByCode = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
-    // Chỉ owner hoặc admin mới xem được
+    // Deny access to System Admin
+    if (req.user?.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
     const ticketOwnerId = (ticket.userId as any)._id
       ? (ticket.userId as any)._id.toString()
       : ticket.userId.toString();
 
-    if (ticketOwnerId !== req.user?.id && req.user?.role !== 'admin') {
+    const isOwner = ticketOwnerId === req.user?.id;
+    const isStaff = req.user?.role === 'staff';
+    const isMyEventAdmin = req.user?.role === 'event_admin' && req.user.managedEventIds?.includes(ticket.eventId._id.toString());
+
+    if (!isOwner && !isStaff && !isMyEventAdmin) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -129,12 +138,15 @@ export const markTicketUsed = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
-    // Event admin: verify ticket belongs to their event
-    if (req.user?.role === 'event_admin') {
-      const managedIds = req.user.managedEventIds || [];
-      if (!managedIds.includes(ticket.eventId.toString())) {
-        return res.status(403).json({ success: false, message: 'You can only manage tickets for your assigned events.' });
-      }
+    // Only staff can mark ticket as used
+    if (req.user?.role !== 'staff') {
+      return res.status(403).json({ success: false, message: 'Only staff can check in tickets' });
+    }
+
+    // If staff is assigned to specific events, verify event ID is included
+    const managedIds = req.user.managedEventIds || [];
+    if (managedIds.length > 0 && !managedIds.includes(ticket.eventId.toString())) {
+      return res.status(403).json({ success: false, message: 'You are not assigned to manage tickets for this event.' });
     }
 
     if (ticket.status !== 'active') {
@@ -166,14 +178,40 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
   try {
     const { status, eventId, page = '1', limit = '20', search } = req.query as Record<string, string>;
 
+    console.log(`[DEBUG] getAllTickets called. User: ${req.user?.email}, Role: ${req.user?.role}, ManagedEventIds: ${JSON.stringify(req.user?.managedEventIds)}`);
+
+    // System admin is not allowed to view tickets
+    if (req.user?.role === 'admin') {
+      console.log(`[DEBUG] getAllTickets Access Denied: User role is admin`);
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
     const filter: any = {};
     if (status) filter.status = status;
-    if (eventId) filter.eventId = eventId;
 
-    // Event admin: scope to their managed events
-    if (req.user?.role === 'event_admin') {
-      const managedIds = req.user.managedEventIds || [];
-      filter.eventId = eventId ? eventId : { $in: managedIds };
+    // Scope to managed events for event_admin or staff (if they have assignments)
+    const isEventAdmin = req.user?.role === 'event_admin';
+    const isStaff = req.user?.role === 'staff';
+    const managedIds = req.user?.managedEventIds || [];
+
+    if (isEventAdmin) {
+      const targetEventId = eventId ? new mongoose.Types.ObjectId(eventId) : undefined;
+      filter.eventId = targetEventId ? targetEventId : { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) };
+      if (eventId && !managedIds.includes(eventId)) {
+        console.log(`[DEBUG] getAllTickets Unauthorized event access for eventId: ${eventId}`);
+        return res.status(403).json({ success: false, message: 'Unauthorized event access.' });
+      }
+    } else if (isStaff) {
+      if (managedIds.length > 0) {
+        const targetEventId = eventId ? new mongoose.Types.ObjectId(eventId) : undefined;
+        filter.eventId = targetEventId ? targetEventId : { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) };
+        if (eventId && !managedIds.includes(eventId)) {
+          console.log(`[DEBUG] getAllTickets Staff Unauthorized event access for eventId: ${eventId}`);
+          return res.status(403).json({ success: false, message: 'Unauthorized event access.' });
+        }
+      } else if (eventId) {
+        filter.eventId = new mongoose.Types.ObjectId(eventId);
+      }
     }
 
     if (search) {
@@ -185,6 +223,8 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
         { seatNumber: { $regex: search, $options: 'i' } },
       ];
     }
+
+    console.log(`[DEBUG] getAllTickets Mongoose Filter: ${JSON.stringify(filter)}`);
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, parseInt(limit));
@@ -202,12 +242,15 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
       Ticket.countDocuments(filter),
     ]);
 
+    console.log(`[DEBUG] getAllTickets Found: ${tickets.length} (Total: ${total})`);
+
     return res.status(200).json({
       success: true,
       data: tickets,
       pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
     });
   } catch (error: any) {
+    console.error(`[DEBUG] getAllTickets Error: ${error.message}`);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
