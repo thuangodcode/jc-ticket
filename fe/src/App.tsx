@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Suspense, lazy, useEffect } from 'react';
 import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -36,6 +36,7 @@ const AdminUserManagement = lazy(() => import('./pages/admin/AdminUserManagement
 const AdminSystemStats = lazy(() => import('./pages/admin/AdminSystemStats'));
 const AdminScanPage = lazy(() => import('./pages/admin/AdminScanPage'));
 const AdminSupportPage = lazy(() => import('./pages/admin/AdminSupportPage'));
+const AdminAISupport = lazy(() => import('./pages/admin/AdminAISupport'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -138,9 +139,10 @@ function AppContent() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
+            <Route index element={<Navigate to="/admin/system-stats" replace />} />
             <Route path="users" element={<AdminUserManagement />} />
             <Route path="system-stats" element={<AdminSystemStats />} />
+            <Route path="ai-support" element={<AdminAISupport />} />
             <Route path="support" element={<AdminSupportPage />} />
           </Route>
 
@@ -152,6 +154,7 @@ function AppContent() {
             <Route path="events" element={<AdminEvents />} />
             <Route path="events/create" element={<AdminEventFormPage />} />
             <Route path="events/edit/:id" element={<AdminEventFormPage />} />
+            <Route path="ai-support" element={<AdminAISupport />} />
           </Route>
 
           {/* Staff Routes */}

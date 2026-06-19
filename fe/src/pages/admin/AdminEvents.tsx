@@ -37,11 +37,7 @@ export default function AdminEvents() {
       if (search) params.search = search;
       const res = await eventService.getEvents(params);
       let data = res.data;
-      // Event admin: filter to only managed events
-      if (isEventAdmin) {
-        const managedIds = user?.managedEventIds || [];
-        data = data.filter((e: any) => managedIds.includes(e._id));
-      }
+      // Event admin can see all events in system-wide mode
       setEvents(data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -146,7 +142,7 @@ export default function AdminEvents() {
 
           <button
             onClick={() => navigate(`${routePrefix}/events/create`)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-gradient-to-r from-akai to-sakura-dark text-white hover:shadow-lg hover:shadow-akai/25 transition-all duration-300 hover:-translate-y-0.5 shrink-0 ${isEventAdmin ? 'hidden' : ''}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-gradient-to-r from-akai to-sakura-dark text-white hover:shadow-lg hover:shadow-akai/25 transition-all duration-300 hover:-translate-y-0.5 shrink-0 ${isEventAdmin ? '' : 'hidden'}`}
           >
             <Plus size={14} />
             Tạo sự kiện
@@ -275,21 +271,23 @@ export default function AdminEvents() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-1.5">
-                        <button
-                          onClick={() => navigate(`${routePrefix}/events/edit/${e._id}`)}
-                          title="Chỉnh sửa"
-                          className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        {isSuperAdmin && (
-                          <button
-                            onClick={() => handleDelete(e._id)}
-                            title="Xóa"
-                            className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        {isEventAdmin && (
+                          <>
+                            <button
+                              onClick={() => navigate(`${routePrefix}/events/edit/${e._id}`)}
+                              title="Chỉnh sửa"
+                              className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(e._id)}
+                              title="Xóa"
+                              className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>

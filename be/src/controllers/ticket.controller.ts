@@ -195,11 +195,8 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
     const managedIds = req.user?.managedEventIds || [];
 
     if (isEventAdmin) {
-      const targetEventId = eventId ? new mongoose.Types.ObjectId(eventId) : undefined;
-      filter.eventId = targetEventId ? targetEventId : { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) };
-      if (eventId && !managedIds.includes(eventId)) {
-        console.log(`[DEBUG] getAllTickets Unauthorized event access for eventId: ${eventId}`);
-        return res.status(403).json({ success: false, message: 'Unauthorized event access.' });
+      if (eventId) {
+        filter.eventId = new mongoose.Types.ObjectId(eventId);
       }
     } else if (isStaff) {
       if (managedIds.length > 0) {

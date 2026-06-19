@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Ticket, CalendarDays,
-  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode, MessageSquare, Users, BarChart3
+  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode, MessageSquare, Users, BarChart3, Sparkles
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
@@ -18,9 +18,9 @@ interface NavItem {
 
 /** Navigation items for the main admin (System Admin) */
 const adminNavItems: NavItem[] = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Tổng quan hệ thống', end: true },
   { to: '/admin/system-stats', icon: BarChart3, label: 'Thống kê hệ thống' },
   { to: '/admin/users', icon: Users, label: 'Quản lý tài khoản' },
+  { to: '/admin/ai-support', icon: Sparkles, label: 'AI hỗ trợ' },
   { to: '/admin/support', icon: MessageSquare, label: 'Hỗ trợ khách hàng' },
 ];
 
@@ -30,6 +30,7 @@ const eventAdminNavItems: NavItem[] = [
   { to: '/event-admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { to: '/event-admin/tickets', icon: Ticket, label: 'Vé phát hành' },
   { to: '/event-admin/events', icon: CalendarDays, label: 'Sự kiện' },
+  { to: '/event-admin/ai-support', icon: Sparkles, label: 'AI hỗ trợ' },
 ];
 
 /** Navigation items for staff */
@@ -178,6 +179,7 @@ export default function AdminLayout() {
     if (path.includes('/events')) return 'Quản lý sự kiện';
     if (path.includes('/users')) return 'Quản lý tài khoản';
     if (path.includes('/system-stats')) return 'Thống kê hệ thống';
+    if (path.includes('/ai-support')) return 'AI hỗ trợ & Phân tích';
     return isStaff ? 'Staff' : isEventAdmin ? 'Event Admin' : 'Admin';
   };
 
@@ -399,7 +401,7 @@ export default function AdminLayout() {
                   : 'Bạn không có quyền truy cập trang này.'}
               </p>
               <button
-                onClick={() => navigate(isStaff ? '/staff/check-in' : isEventAdmin ? '/event-admin' : '/admin')}
+                onClick={() => navigate(isStaff ? '/staff/check-in' : isEventAdmin ? '/event-admin' : '/admin/system-stats')}
                 className={`px-6 py-2.5 bg-gradient-to-r ${roleTheme.accentGradient} text-white rounded-xl font-bold text-xs hover:shadow-lg transition-all`}
               >
                 {isStaff ? 'Đến trang Quét vé Check-in' : 'Quay lại Dashboard'}

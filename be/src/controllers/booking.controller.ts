@@ -195,19 +195,14 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
  */
 export const getAllBookings = async (req: AuthRequest, res: Response) => {
   try {
-    const { status, paymentStatus, page = '1', limit = '20', search } = req.query as Record<string, string>;
+    const { status, paymentStatus, page = '1', limit = '20', search, eventId } = req.query as Record<string, string>;
 
     console.log(`[DEBUG] getAllBookings called. User: ${req.user?.email}, Role: ${req.user?.role}, ManagedEventIds: ${JSON.stringify(req.user?.managedEventIds)}`);
 
     const filter: any = {};
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
-
-    // Event admin: scope to their managed events
-    if (req.user?.role === 'event_admin') {
-      const managedIds = req.user.managedEventIds || [];
-      filter.eventId = { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) };
-    }
+    if (eventId) filter.eventId = new mongoose.Types.ObjectId(eventId);
 
     if (search) {
       filter.$or = [
@@ -375,8 +370,7 @@ export const getBookingStats = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, message: 'Access denied.' });
     }
 
-    const managedIds = req.user?.managedEventIds || [];
-    const scopeFilter: any = { eventId: { $in: managedIds.map((id: string) => new mongoose.Types.ObjectId(id)) } };
+    const scopeFilter: any = {};
 
     const [
       totalBookings,

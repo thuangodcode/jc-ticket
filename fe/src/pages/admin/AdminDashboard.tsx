@@ -12,7 +12,6 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { bookingService } from '../../services/bookingService';
 import { useUserAuth } from '../../contexts/useUserAuth';
-import AdminAIPanel from '../../components/admin/AdminAIPanel';
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -72,6 +71,12 @@ export default function AdminDashboard() {
           bannerGradient: 'from-[#080a15] to-[#0e1122]',
           orbGradient: 'from-indigo-500/20 to-purple-500/10',
         };
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      navigate('/admin/system-stats', { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -402,10 +407,6 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-      {/* ── AI Admin Assistant ── */}
-      <motion.div {...fadeUp} transition={{ delay: 0.45, duration: 0.4 }}>
-        <AdminAIPanel />
-      </motion.div>
     </div>
   );
 }

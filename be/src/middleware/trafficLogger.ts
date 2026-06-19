@@ -7,12 +7,16 @@ import jwt from 'jsonwebtoken';
  */
 export const logTraffic = (req: Request, _res: Response, next: NextFunction) => {
   try {
-    // Avoid logging static asset requests or uploads
-    if (
-      req.path.startsWith('/uploads') ||
-      req.path.startsWith('/assets') ||
-      req.path.includes('.')
-    ) {
+    // Check if the request is a main system access entry point
+    const cleanPath = (req.originalUrl || req.path || '').split('?')[0] || '';
+    const systemAccessPaths = [
+      '/api/auth/me',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/verify-otp'
+    ];
+
+    if (!systemAccessPaths.includes(cleanPath)) {
       return next();
     }
 
@@ -39,7 +43,7 @@ export const logTraffic = (req: Request, _res: Response, next: NextFunction) => 
     }
 
     const logData: any = {
-      path: req.baseUrl + req.path,
+      path: cleanPath,
       method: req.method,
       timestamp: new Date(),
     };
