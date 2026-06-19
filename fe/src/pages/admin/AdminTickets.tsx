@@ -5,6 +5,7 @@ import { Eye, RefreshCw, Search, ChevronLeft, ChevronRight, X, CheckCircle } fro
 import { useTheme } from '../../contexts/ThemeContext';
 import { ticketService } from '../../services/ticketService';
 import { toast } from 'sonner';
+import { useUserAuth } from '../../contexts/useUserAuth';
 
 const statusConfig: Record<string, { bg: string; text: string; label: string; dot: string }> = {
   active: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', label: 'Có hiệu lực', dot: 'bg-emerald-500' },
@@ -22,6 +23,7 @@ const filterOptions = [
 
 export default function AdminTickets() {
   const { isDark } = useTheme();
+  const { user } = useUserAuth();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
@@ -281,7 +283,7 @@ export default function AdminTickets() {
               </div>
 
               <div className="flex gap-2 mt-5">
-                {detail.status === 'active' && (
+                {detail.status === 'active' && user?.role === 'staff' && (
                   <button
                     onClick={() => handleMarkUsed(detail.ticketCode)}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-sm hover:bg-emerald-600 transition-colors"
@@ -292,7 +294,7 @@ export default function AdminTickets() {
                 )}
                 <button
                   onClick={() => setDetail(null)}
-                  className={`${detail.status === 'active' ? 'flex-1' : 'w-full'} py-2.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-akai/25 transition-all duration-300`}
+                  className={`${detail.status === 'active' && user?.role === 'staff' ? 'flex-1' : 'w-full'} py-2.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-akai/25 transition-all duration-300`}
                 >
                   Đóng
                 </button>

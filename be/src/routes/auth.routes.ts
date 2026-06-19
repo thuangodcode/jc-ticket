@@ -14,6 +14,10 @@ import {
   revokeEventAdmin,
   getEventAdmins,
   createEventAdmin,
+  getAllUsers,
+  createUserAccount,
+  deleteUserAccount,
+  getSystemStats,
 } from '../controllers/auth.controller';
 import { protect, superAdminOnly } from '../middleware/auth';
 import {
@@ -111,5 +115,13 @@ router.post('/create-event-admin', protect, superAdminOnly, createEventAdmin);
 router.post('/assign-event-admin', protect, superAdminOnly, assignEventAdmin);
 router.post('/revoke-event-admin', protect, superAdminOnly, revokeEventAdmin);
 router.get('/event-admins', protect, superAdminOnly, getEventAdmins);
+
+/**
+ * User & System Management Routes (super admin only)
+ */
+router.get('/users', protect, superAdminOnly, getAllUsers);
+router.post('/users', protect, superAdminOnly, createUserAccount);
+router.delete('/users/:id', protect, superAdminOnly, deleteUserAccount);
+router.get('/system-stats', protect, superAdminOnly, getSystemStats);
 
 export default router;

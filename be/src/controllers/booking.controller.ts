@@ -164,10 +164,23 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    // Check ownership or admin (userId is NOT populated here, so .toString() works)
     const bookingUserId = booking.userId.toString();
-    if (bookingUserId !== req.user?.id && req.user?.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    const isOwner = bookingUserId === req.user?.id;
+    const isEventAdmin = req.user?.role === 'event_admin';
+    const isStaff = req.user?.role === 'staff';
+    const managedIds = req.user?.managedEventIds || [];
+
+    let isAuthorized = isOwner;
+    if (!isAuthorized) {
+      if (isEventAdmin) {
+        isAuthorized = managedIds.includes(booking.eventId._id ? booking.eventId._id.toString() : booking.eventId.toString());
+      } else if (isStaff) {
+        isAuthorized = managedIds.length === 0 || managedIds.includes(booking.eventId._id ? booking.eventId._id.toString() : booking.eventId.toString());
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, message: 'Unauthorized access to this booking.' });
     }
 
     return res.status(200).json({ success: true, data: booking });
@@ -182,17 +195,14 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
  */
 export const getAllBookings = async (req: AuthRequest, res: Response) => {
   try {
-    const { status, paymentStatus, page = '1', limit = '20', search } = req.query as Record<string, string>;
+    const { status, paymentStatus, page = '1', limit = '20', search, eventId } = req.query as Record<string, string>;
+
+    console.log(`[DEBUG] getAllBookings called. User: ${req.user?.email}, Role: ${req.user?.role}, ManagedEventIds: ${JSON.stringify(req.user?.managedEventIds)}`);
 
     const filter: any = {};
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
-
-    // Event admin: scope to their managed events
-    if (req.user?.role === 'event_admin') {
-      const managedIds = req.user.managedEventIds || [];
-      filter.eventId = { $in: managedIds };
-    }
+    if (eventId) filter.eventId = new mongoose.Types.ObjectId(eventId);
 
     if (search) {
       filter.$or = [
@@ -202,6 +212,8 @@ export const getAllBookings = async (req: AuthRequest, res: Response) => {
         { 'passengerInfo.email': { $regex: search, $options: 'i' } },
       ];
     }
+
+    console.log(`[DEBUG] getAllBookings Mongoose Filter: ${JSON.stringify(filter)}`);
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, parseInt(limit));
@@ -217,12 +229,15 @@ export const getAllBookings = async (req: AuthRequest, res: Response) => {
       Booking.countDocuments(filter),
     ]);
 
+    console.log(`[DEBUG] getAllBookings Found: ${bookings.length} (Total: ${total})`);
+
     return res.status(200).json({
       success: true,
       data: bookings,
       pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
     });
   } catch (error: any) {
+    console.error(`[DEBUG] getAllBookings Error: ${error.message}`);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -282,19 +297,24 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    // Check ownership or admin
-    if (booking.userId.toString() !== req.user?.id && req.user?.role !== 'admin' && req.user?.role !== 'event_admin') {
-      await session.abortTransaction();
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    const bookingUserId = booking.userId.toString();
+    const isOwner = bookingUserId === req.user?.id;
+    const isEventAdmin = req.user?.role === 'event_admin';
+    const isStaff = req.user?.role === 'staff';
+    const managedIds = req.user?.managedEventIds || [];
+
+    let isAuthorized = isOwner;
+    if (!isAuthorized) {
+      if (isEventAdmin) {
+        isAuthorized = managedIds.includes(booking.eventId.toString());
+      } else if (isStaff) {
+        isAuthorized = managedIds.length === 0 || managedIds.includes(booking.eventId.toString());
+      }
     }
 
-    // Event admin: verify booking belongs to their event
-    if (req.user?.role === 'event_admin') {
-      const managedIds = req.user.managedEventIds || [];
-      if (!managedIds.includes(booking.eventId.toString())) {
-        await session.abortTransaction();
-        return res.status(403).json({ success: false, message: 'You can only manage bookings for your assigned events.' });
-      }
+    if (!isAuthorized) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Unauthorized access to this booking.' });
     }
 
     if (booking.status === 'cancelled') {
@@ -303,7 +323,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
     }
 
     // Prevent regular users from cancelling already-paid bookings
-    if (booking.paymentStatus === 'successful' && req.user?.role !== 'admin') {
+    if (booking.paymentStatus === 'successful' && !isEventAdmin && !isStaff) {
       await session.abortTransaction();
       return res.status(400).json({ success: false, message: 'Cannot cancel a booking that has been paid. Contact support.' });
     }
@@ -345,10 +365,12 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
  */
 export const getBookingStats = async (req: AuthRequest, res: Response) => {
   try {
-    // Event admin scope filter
-    const isEventAdmin = req.user?.role === 'event_admin';
-    const managedIds = req.user?.managedEventIds || [];
-    const scopeFilter: any = isEventAdmin ? { eventId: { $in: managedIds.map((id: string) => new (require('mongoose').Types.ObjectId)(id)) } } : {};
+    // Only event_admin can view booking/event stats
+    if (req.user?.role !== 'event_admin') {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const scopeFilter: any = {};
 
     const [
       totalBookings,

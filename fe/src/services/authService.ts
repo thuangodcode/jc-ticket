@@ -203,6 +203,28 @@ export const authService = {
     const response = await authAPI.post('/create-event-admin', data);
     return response.data;
   },
+
+  // Account management (System Admin)
+  getAllUsers: async (params?: { role?: string; search?: string; page?: number; limit?: number }) => {
+    const response = await authAPI.get('/users', { params });
+    return response.data;
+  },
+
+  createUserAccount: async (data: any) => {
+    const response = await authAPI.post('/users', data);
+    return response.data;
+  },
+
+  deleteUserAccount: async (id: string) => {
+    const response = await authAPI.delete(`/users/${id}`);
+    return response.data;
+  },
+
+  // System Stats (System Admin)
+  getSystemStats: async () => {
+    const response = await authAPI.get('/system-stats');
+    return response.data;
+  },
 };
 
 export default authAPI;

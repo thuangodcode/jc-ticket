@@ -27,6 +27,7 @@ import newsletterRoutes from './routes/newsletter.routes';
 import chatRoutes from './routes/chat.routes';
 import { initSocket } from './utils/socket';
 import { globalErrorHandler } from './middleware/auth';
+import { logTraffic } from './middleware/trafficLogger';
 import { Booking } from './models/Booking';
 import { Event } from './models/Event';
 import { Ticket } from './models/Ticket';
@@ -90,6 +91,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Cookie Parser Middleware - For reading/setting httpOnly cookies
 app.use(cookieParser());
+app.use(logTraffic);
 
 // Migrate existing tickets with localhost QR codes
 const migrateQRCodes = async () => {

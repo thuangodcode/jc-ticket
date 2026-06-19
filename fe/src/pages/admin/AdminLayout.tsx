@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Ticket, CalendarDays,
-  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode, MessageSquare, Users
+  LogOut, Menu, X, Moon, Sun, ChevronLeft, ChevronRight, Bell, QrCode, MessageSquare, Users, BarChart3, Sparkles
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useUserAuth } from '../../contexts/useUserAuth';
@@ -16,23 +16,21 @@ interface NavItem {
   end?: boolean;
 }
 
-/** Navigation items for the main admin */
+/** Navigation items for the main admin (System Admin) */
 const adminNavItems: NavItem[] = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
-  { to: '/admin/tickets', icon: Ticket, label: 'Vé phát hành' },
-  { to: '/admin/events', icon: CalendarDays, label: 'Sự kiện' },
+  { to: '/admin/system-stats', icon: BarChart3, label: 'Thống kê hệ thống' },
+  { to: '/admin/users', icon: Users, label: 'Quản lý tài khoản' },
+  { to: '/admin/ai-support', icon: Sparkles, label: 'AI hỗ trợ' },
   { to: '/admin/support', icon: MessageSquare, label: 'Hỗ trợ khách hàng' },
-  { to: '/admin/event-admins', icon: Users, label: 'Tài khoản Event Admin' },
 ];
 
-/** Navigation items for event_admin */
+/** Navigation items for event_admin (Organizer) */
 const eventAdminNavItems: NavItem[] = [
   { to: '/event-admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/event-admin/scan', icon: QrCode, label: 'Quét vé Check-in' },
   { to: '/event-admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { to: '/event-admin/tickets', icon: Ticket, label: 'Vé phát hành' },
   { to: '/event-admin/events', icon: CalendarDays, label: 'Sự kiện' },
+  { to: '/event-admin/ai-support', icon: Sparkles, label: 'AI hỗ trợ' },
 ];
 
 /** Navigation items for staff */
@@ -54,6 +52,52 @@ export default function AdminLayout() {
   const isStaff = user?.role === 'staff';
   const isEventAdmin = user?.role === 'event_admin';
 
+  // Role theme configuration
+  const roleTheme = isStaff
+    ? {
+        name: 'Staff Station',
+        panelTitle: 'Staff Panel',
+        accentGradient: 'from-teal-500 to-emerald-600',
+        accentShadow: 'shadow-teal-500/25',
+        accentText: 'text-teal-500',
+        bgDark: 'bg-[#060c0d]',
+        sidebarBgDark: 'bg-[#0b1416]/95',
+        logoText: 'text-teal-400',
+        activeBtn: 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/25',
+        loaderBorder: 'border-teal-500',
+        textMuted: 'text-teal-400/70',
+        badgeBg: 'bg-teal-500/10 text-teal-500',
+      }
+    : isEventAdmin
+      ? {
+          name: 'Organizer Portal',
+          panelTitle: 'Organizer Panel',
+          accentGradient: 'from-orange-500 to-rose-600',
+          accentShadow: 'shadow-orange-500/25',
+          accentText: 'text-orange-500',
+          bgDark: 'bg-[#110e15]',
+          sidebarBgDark: 'bg-[#181320]/95',
+          logoText: 'text-orange-400',
+          activeBtn: 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-md shadow-orange-500/25',
+          loaderBorder: 'border-orange-500',
+          textMuted: 'text-orange-400/70',
+          badgeBg: 'bg-orange-500/10 text-orange-500',
+        }
+      : {
+          name: 'System Admin',
+          panelTitle: 'System Panel',
+          accentGradient: 'from-indigo-600 to-violet-600',
+          accentShadow: 'shadow-indigo-500/25',
+          accentText: 'text-indigo-500',
+          bgDark: 'bg-[#080a15]',
+          sidebarBgDark: 'bg-[#0e1122]/95',
+          logoText: 'text-indigo-400',
+          activeBtn: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/25',
+          loaderBorder: 'border-indigo-500',
+          textMuted: 'text-indigo-400/70',
+          badgeBg: 'bg-indigo-500/10 text-indigo-500',
+        };
+
   // Determine nav items based on role
   const filteredNavItems = isStaff
     ? staffNavItems
@@ -63,10 +107,10 @@ export default function AdminLayout() {
 
   // Check if user can access the current route
   const isCurrentRouteAllowed = isStaff
-    ? location.pathname === '/staff/check-in' || location.pathname === '/staff/support'
+    ? location.pathname.startsWith('/staff')
     : isEventAdmin
       ? location.pathname.startsWith('/event-admin')
-      : !location.pathname.startsWith('/staff/check-in') && !location.pathname.startsWith('/staff/support');
+      : location.pathname.startsWith('/admin');
 
   // Fetch managed event names for event_admin
   useEffect(() => {
@@ -92,8 +136,8 @@ export default function AdminLayout() {
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0c0f1a] text-white' : 'bg-gray-50'}`}>
-        <div className="w-12 h-12 border-4 border-akai border-t-transparent rounded-full animate-spin" />
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? (isEventAdmin ? 'bg-[#110e15]' : isStaff ? 'bg-[#060c0d]' : 'bg-[#080a15]') + ' text-white' : 'bg-gray-50'}`}>
+        <div className={`w-12 h-12 border-4 ${isEventAdmin ? 'border-orange-500' : isStaff ? 'border-teal-500' : 'border-indigo-600'} border-t-transparent rounded-full animate-spin`} />
       </div>
     );
   }
@@ -133,18 +177,21 @@ export default function AdminLayout() {
     if (path.includes('/events/create')) return 'Tạo sự kiện mới';
     if (path.includes('/events/edit')) return 'Chỉnh sửa sự kiện';
     if (path.includes('/events')) return 'Quản lý sự kiện';
+    if (path.includes('/users')) return 'Quản lý tài khoản';
+    if (path.includes('/system-stats')) return 'Thống kê hệ thống';
+    if (path.includes('/ai-support')) return 'AI hỗ trợ & Phân tích';
     return isStaff ? 'Staff' : isEventAdmin ? 'Event Admin' : 'Admin';
   };
 
   return (
-    <div className={`min-h-screen flex ${isDark ? 'bg-[#0c0f1a] text-gray-100' : 'bg-gray-50/80 text-ink'}`}>
+    <div className={`min-h-screen flex ${isDark ? `${roleTheme.bgDark} text-gray-100` : 'bg-gray-50/80 text-ink'}`}>
       {/* ── Sidebar ── */}
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           ${collapsed ? 'w-[72px]' : 'w-64'}
           ${isDark
-            ? 'bg-[#111528]/95 border-white/[0.06]'
+            ? `${roleTheme.sidebarBgDark} border-white/[0.06]`
             : 'bg-white/95 border-gray-200/80'}
           border-r flex flex-col backdrop-blur-xl
           transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
@@ -152,23 +199,28 @@ export default function AdminLayout() {
         `}
       >
         {/* Logo */}
-        <div className={`h-16 flex items-center ${collapsed ? 'justify-center px-0' : 'px-5'} gap-3 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'}`}>
-          <div className="w-9 h-9 bg-gradient-to-br from-akai to-sakura-dark rounded-xl flex items-center justify-center shadow-lg shadow-akai/20 shrink-0">
-            <span className="text-white font-bold text-sm">JC</span>
-          </div>
-          {!collapsed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden">
-              <p className="font-bold text-sm tracking-tight">JC-Ticket</p>
-              <p className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                {isStaff ? 'Staff Panel' : isEventAdmin ? 'Event Admin' : 'Admin Panel'}
-              </p>
-              {isEventAdmin && managedEventNames.length > 0 && (
-                <p className={`text-[9px] truncate max-w-[140px] ${isDark ? 'text-akai/70' : 'text-akai/80'}`} title={managedEventNames.join(', ')}>
-                  📋 {managedEventNames.length > 1 ? `${managedEventNames.length} sự kiện` : managedEventNames[0]}
+        <div className={`h-20 flex items-center ${collapsed ? 'justify-center px-0' : 'px-5'} gap-3 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'}`}>
+          <Link
+            to="/"
+            className="flex items-center gap-3 hover:opacity-85 transition-all duration-200 shrink-0"
+          >
+            <div className={`w-11 h-11 bg-gradient-to-br ${roleTheme.accentGradient} rounded-xl flex items-center justify-center shadow-lg ${roleTheme.accentShadow} shrink-0`}>
+              <span className="text-white font-extrabold text-base">JC</span>
+            </div>
+            {!collapsed && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden">
+                <p className="font-extrabold text-[15px] tracking-tight leading-tight">JC-Ticket</p>
+                <p className={`text-[11px] font-medium mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {roleTheme.name}
                 </p>
-              )}
-            </motion.div>
-          )}
+                {isEventAdmin && managedEventNames.length > 0 && (
+                  <p className={`text-[10px] truncate max-w-[130px] mt-0.5 ${isDark ? 'text-orange-400/80' : 'text-orange-500/80'}`} title={managedEventNames.join(', ')}>
+                    📋 {managedEventNames.length > 1 ? `${managedEventNames.length} sự kiện` : managedEventNames[0]}
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </Link>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-1.5 rounded-lg hover:bg-white/10">
             <X size={18} />
           </button>
@@ -187,7 +239,7 @@ export default function AdminLayout() {
                 rounded-xl text-[13px] font-medium
                 transition-all duration-200 relative
                 ${isActive
-                  ? `bg-gradient-to-r from-akai to-sakura-dark text-white shadow-md shadow-akai/25`
+                  ? roleTheme.activeBtn
                   : isDark
                     ? 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.06]'
                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/80'
@@ -210,7 +262,6 @@ export default function AdminLayout() {
           </button>
         </div>
 
-
       </aside>
 
       {/* ── Mobile overlay ── */}
@@ -232,7 +283,7 @@ export default function AdminLayout() {
         <header className={`
           sticky top-0 z-30 h-16 flex items-center gap-4 px-4 md:px-6
           ${isDark
-            ? 'bg-[#0c0f1a]/80 border-white/[0.06]'
+            ? `${roleTheme.bgDark}/80 border-white/[0.06]`
             : 'bg-white/80 border-gray-200/60'
           }
           border-b backdrop-blur-xl
@@ -263,7 +314,7 @@ export default function AdminLayout() {
             {/* Notification bell */}
             <button className={`p-2.5 rounded-xl transition-all duration-300 relative ${isDark ? 'hover:bg-white/[0.06] text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
               <Bell size={18} />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-akai rounded-full ring-2 ring-white dark:ring-[#0c0f1a]" />
+              <span className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white ${isDark ? (isEventAdmin ? 'ring-[#110e15]' : isStaff ? 'ring-[#060c0d]' : 'ring-[#080a15]') : ''}`} />
             </button>
 
             {/* User Profile & Logout Dropdown */}
@@ -276,7 +327,7 @@ export default function AdminLayout() {
                 aria-expanded={profileDropdownOpen}
                 aria-haspopup="true"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-akai to-sakura-dark flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-akai/20">
+                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${roleTheme.accentGradient} flex items-center justify-center text-white font-bold text-sm shadow-sm ${roleTheme.accentShadow}`}>
                   {user?.name?.charAt(0)?.toUpperCase()}
                 </div>
                 <span className="hidden md:block text-xs font-semibold">{user?.name}</span>
@@ -297,7 +348,7 @@ export default function AdminLayout() {
                       transition={{ duration: 0.15 }}
                       className={`absolute right-0 mt-2 w-56 rounded-xl border shadow-xl z-50 p-2 ${
                         isDark
-                          ? 'bg-[#111528] border-white/[0.06] shadow-black/40'
+                          ? `${roleTheme.sidebarBgDark} border-white/[0.06] shadow-black/40`
                           : 'bg-white border-gray-200 shadow-gray-200/50'
                       }`}
                     >
@@ -305,7 +356,7 @@ export default function AdminLayout() {
                       <div className="px-3 py-2.5 border-b mb-1 border-gray-100 dark:border-white/[0.06]">
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Tài khoản</p>
                         <p className="text-sm font-semibold truncate mt-0.5">{user?.name}</p>
-                        <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-akai/10 text-akai">
+                        <span className={`inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${roleTheme.badgeBg}`}>
                           {user?.role === 'admin' ? 'Administrator' : user?.role === 'event_admin' ? 'Event Admin' : 'Staff'}
                         </span>
                       </div>
@@ -350,8 +401,8 @@ export default function AdminLayout() {
                   : 'Bạn không có quyền truy cập trang này.'}
               </p>
               <button
-                onClick={() => navigate(isStaff ? '/staff/check-in' : isEventAdmin ? '/event-admin' : '/admin')}
-                className="px-6 py-2.5 bg-gradient-to-r from-akai to-sakura-dark text-white rounded-xl font-bold text-xs hover:shadow-lg transition-all"
+                onClick={() => navigate(isStaff ? '/staff/check-in' : isEventAdmin ? '/event-admin' : '/admin/system-stats')}
+                className={`px-6 py-2.5 bg-gradient-to-r ${roleTheme.accentGradient} text-white rounded-xl font-bold text-xs hover:shadow-lg transition-all`}
               >
                 {isStaff ? 'Đến trang Quét vé Check-in' : 'Quay lại Dashboard'}
               </button>

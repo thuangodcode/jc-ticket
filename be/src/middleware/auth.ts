@@ -39,12 +39,19 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     const User = require('../models/User').User;
     const user = await User.findById(decoded.id);
 
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found. Please log in again.',
+      });
+    }
+
     // Attach user info to request
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      role: decoded.role,
-      managedEventIds: user?.managedEventIds?.map((id: any) => id.toString()) || [],
+      role: user.role, // Use database fresh role
+      managedEventIds: user.managedEventIds?.map((id: any) => id.toString()) || [],
     };
 
     return next();
@@ -64,7 +71,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 };
 
 /**
- * Admin middleware - Check if user is admin
+ * Admin middleware - Check if user is admin or event_admin
  * Must be used after protect middleware
  */
 export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -87,6 +94,51 @@ export const superAdminOnly = (req: AuthRequest, res: Response, next: NextFuncti
     return res.status(403).json({
       success: false,
       message: 'Access denied. Super Admin privileges required.',
+    });
+  }
+
+  return next();
+};
+
+/**
+ * Event Admin middleware - Check if user is event_admin (organizer)
+ * Must be used after protect middleware
+ */
+export const eventAdminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'event_admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Event Admin privileges required.',
+    });
+  }
+
+  return next();
+};
+
+/**
+ * Staff middleware - Check if user is staff (check-in / helper)
+ * Must be used after protect middleware
+ */
+export const staffOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'staff') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Staff privileges required.',
+    });
+  }
+
+  return next();
+};
+
+/**
+ * Staff or Event Admin middleware
+ * Must be used after protect middleware
+ */
+export const staffOrEventAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'event_admin' && req.user?.role !== 'staff') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Staff or Event Admin privileges required.',
     });
   }
 

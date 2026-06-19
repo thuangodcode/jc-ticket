@@ -2,7 +2,3 @@ node_modules
 be/dist
 .env
 .env.*
-*.env
-be/.env
-fe/.env
-fe/.env.local

@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Suspense, lazy, useEffect } from 'react';
 import './i18n/config';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -32,9 +32,11 @@ const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminTickets = lazy(() => import('./pages/admin/AdminTickets'));
 const AdminEvents = lazy(() => import('./pages/admin/AdminEvents'));
 const AdminEventFormPage = lazy(() => import('./pages/admin/AdminEventFormPage'));
-const AdminEventAdmins = lazy(() => import('./pages/admin/AdminEventAdmins'));
+const AdminUserManagement = lazy(() => import('./pages/admin/AdminUserManagement'));
+const AdminSystemStats = lazy(() => import('./pages/admin/AdminSystemStats'));
 const AdminScanPage = lazy(() => import('./pages/admin/AdminScanPage'));
 const AdminSupportPage = lazy(() => import('./pages/admin/AdminSupportPage'));
+const AdminAISupport = lazy(() => import('./pages/admin/AdminAISupport'));
 
 // Types
 interface SearchFilters { query: string; date: string; location: string; }
@@ -102,21 +104,8 @@ function HomePage() {
  * App Component with Router
  */
 function AppContent() {
-  const { user, isAuthenticated, isLoading } = useUserAuth();
-  const navigate = useNavigate();
+  const { isLoading } = useUserAuth();
   const location = useLocation();
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/staff') && !location.pathname.startsWith('/event-admin')) {
-      if (user?.role === 'admin') {
-        navigate('/admin');
-      } else if (user?.role === 'event_admin') {
-        navigate('/event-admin');
-      } else if (user?.role === 'staff') {
-        navigate('/staff/check-in');
-      }
-    }
-  }, [user, isAuthenticated, isLoading, location.pathname, navigate]);
 
   if (isLoading) {
     return (
@@ -150,14 +139,11 @@ function AppContent() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="tickets" element={<AdminTickets />} />
-            <Route path="events" element={<AdminEvents />} />
-            <Route path="events/create" element={<AdminEventFormPage />} />
-            <Route path="events/edit/:id" element={<AdminEventFormPage />} />
+            <Route index element={<Navigate to="/admin/system-stats" replace />} />
+            <Route path="users" element={<AdminUserManagement />} />
+            <Route path="system-stats" element={<AdminSystemStats />} />
+            <Route path="ai-support" element={<AdminAISupport />} />
             <Route path="support" element={<AdminSupportPage />} />
-            <Route path="event-admins" element={<AdminEventAdmins />} />
           </Route>
 
           {/* Event Admin Routes */}
@@ -166,8 +152,9 @@ function AppContent() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="events" element={<AdminEvents />} />
+            <Route path="events/create" element={<AdminEventFormPage />} />
             <Route path="events/edit/:id" element={<AdminEventFormPage />} />
-            <Route path="scan" element={<AdminScanPage />} />
+            <Route path="ai-support" element={<AdminAISupport />} />
           </Route>
 
           {/* Staff Routes */}

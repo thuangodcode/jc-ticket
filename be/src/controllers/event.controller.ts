@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Event } from '../models/Event';
 import { AuthRequest } from '../middleware/auth';
+import { User } from '../models/User';
 
 const DEFAULT_SEATS_PER_ROW = 12;
 
@@ -160,6 +161,13 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
 
     const event = await Event.create(eventData);
 
+    // If creator is event_admin, add event id to their managedEventIds
+    if (req.user?.role === 'event_admin') {
+      await User.findByIdAndUpdate(req.user.id, {
+        $addToSet: { managedEventIds: event._id },
+      });
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Event created successfully',
@@ -224,6 +232,14 @@ export const updateEvent = async (req: AuthRequest, res: Response) => {
  */
 export const deleteEvent = async (req: AuthRequest, res: Response) => {
   try {
+    // Event admin can only delete their managed events
+    if (req.user?.role === 'event_admin') {
+      const managedIds = req.user.managedEventIds || [];
+      if (!req.params.id || !managedIds.includes(req.params.id as string)) {
+        return res.status(403).json({ success: false, message: 'You can only delete events assigned to you.' });
+      }
+    }
+
     const event = await Event.findByIdAndUpdate(
       req.params.id,
       { status: 'cancelled' },

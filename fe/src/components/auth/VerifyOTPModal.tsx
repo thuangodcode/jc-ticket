@@ -91,9 +91,15 @@ const VerifyOTPModal: React.FC = () => {
                 position: 'top-center',
               });
 
-              // If admin, navigate to AdminDashboard
-              if (loggedInUser && loggedInUser.role === 'admin') {
-                navigate('/admin');
+              // Redirect admin/staff to dashboard
+              if (loggedInUser) {
+                if (loggedInUser.role === 'admin') {
+                  navigate('/admin');
+                } else if (loggedInUser.role === 'event_admin') {
+                  navigate('/event-admin');
+                } else if (loggedInUser.role === 'staff') {
+                  navigate('/staff/check-in');
+                }
               }
             } catch (loginErr) {
               console.error('Auto-login failed:', loginErr);
